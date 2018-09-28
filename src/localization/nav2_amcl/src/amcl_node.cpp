@@ -22,6 +22,7 @@
 
 #include "amcl_node.hpp"
 #include "nav2_util/pf/pf.h" // pf_vector_t
+#include "nav2_tasks/map_service_client.hpp"
 //#include "util/strutils.h" // TODO (mhpanah): put strutils in util directory
 
 // For transform support
@@ -264,7 +265,7 @@ AmclNode::AmclNode()
   std::bind(&AmclNode::initialPoseReceived, this, std::placeholders::_1));
 
   if (use_map_topic_) {
-    map_sub_ =  this->create_subscription<nav_msgs::msg::OccupancyGrid>("map",
+    map_sub_ =  this->create_subscription<nav_msgs::msg::OccupancyGrid>("occ_grid",
      std::bind(&AmclNode::mapReceived, this, std::placeholders::_1));
     RCLCPP_INFO(get_logger(), "Subscribed to map topic.");
   } else {
@@ -639,6 +640,7 @@ AmclNode::requestMap()
 {
 std::lock_guard<std::recursive_mutex> ml(configuration_mutex_);
 
+#if 0
   // get map via RPC
   auto req = std::make_shared<nav_msgs::srv::GetMap::Request>();
   std::shared_ptr<nav_msgs::srv::GetMap::Response> resp;
@@ -670,12 +672,25 @@ std::lock_guard<std::recursive_mutex> ml(configuration_mutex_);
       return;
     }
   }
-handleMapMessage( resp->map );
+
+  handleMapMessage( resp->map );
+#else
+  nav2_tasks::MapServiceClient map_client;
+  map_client.waitForServer(std::chrono::seconds(2));
+
+  auto request = std::make_shared<nav2_tasks::MapServiceClient::MapServiceRequest>();
+  auto result = map_client.invoke(request);
+
+  RCLCPP_INFO(get_logger(), "AmclNode::requestMap: after service call");
+
+  handleMapMessage(result->map);
+#endif
 }
 
 void
 AmclNode::mapReceived(const nav_msgs::msg::OccupancyGrid::SharedPtr msg)
 {
+  RCLCPP_INFO(get_logger(), "AmclNode::mapReceived");
   if (first_map_only_ && first_map_received_) {
     return;
   }
@@ -690,14 +705,15 @@ AmclNode::handleMapMessage(const nav_msgs::msg::OccupancyGrid& msg)
 
   std::lock_guard<std::recursive_mutex> cfl(configuration_mutex_);
 
-  RCLCPP_INFO(get_logger(), "Received a %d X %d map @ %.3f m/pix\n",
+  RCLCPP_INFO(get_logger(), "Received a %d X %d map @ %.3f m/pix",
            msg.info.width,
            msg.info.height,
            msg.info.resolution);
-  if (msg.header.frame_id != global_frame_id_)
+  if (msg.header.frame_id != global_frame_id_) {
     RCLCPP_WARN(get_logger(), "Frame_id of map received:'%s' doesn't match global_frame_id:'%s'. This could cause issues with reading published topics",
              msg.header.frame_id.c_str(),
              global_frame_id_.c_str());
+  }
 
   freeMapDependentMemory();
   // Clear queued laser objects because they hold pointers to the existing
@@ -1245,6 +1261,7 @@ AmclNode::laserReceived(sensor_msgs::msg::LaserScan::ConstSharedPtr laser_scan)
          }
        */
 
+      printf("Amcl: publishing pose\n");
       pose_pub_->publish(p);
       last_published_pose = p;
 
