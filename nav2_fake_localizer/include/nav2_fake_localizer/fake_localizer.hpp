@@ -58,11 +58,12 @@ public:
 
 protected:
   void stuffFilter(const nav_msgs::msg::Odometry::SharedPtr odom_msg);
-  void update(const nav_msgs::msg::Odometry::SharedPtr msg);
-  void initialPoseReceived(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
 
-  void poseFailure(const message_filters::MessageEvent<const geometry_msgs::msg::PoseWithCovarianceStamped>& /*evt*/);
-  void odomFailure(const message_filters::MessageEvent<const nav_msgs::msg::Odometry>& /*evt*/);
+  void update(const nav_msgs::msg::Odometry &msg);
+  void initialPoseReceived(const geometry_msgs::msg::PoseWithCovarianceStamped & msg);
+
+  void poseFailure(const message_filters::MessageEvent<const geometry_msgs::msg::PoseWithCovarianceStamped>& evt);
+  void odomFailure(const message_filters::MessageEvent<const nav_msgs::msg::Odometry>& evt);
 
   // Publishers and subscribers
   rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_pub_;
@@ -73,14 +74,9 @@ protected:
   geometry_msgs::msg::PoseArray particle_cloud_;
   geometry_msgs::msg::PoseWithCovarianceStamped current_pose_;
 
-#if 0
   // Message filters subscribers
   message_filters::Subscriber<geometry_msgs::msg::PoseWithCovarianceStamped> * initial_pose_sub_;
   message_filters::Subscriber<nav_msgs::msg::Odometry> * filter_sub_;
-#else
-  rclcpp::Subscription<const nav_msgs::msg::Odometry::SharedPtr> filter_sub_;
-  rclcpp::Subscription<const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr> initial_pose_sub_;
-#endif
 
   // Message filters
   tf2_ros::MessageFilter<geometry_msgs::msg::PoseWithCovarianceStamped> * initial_pose_filter_;

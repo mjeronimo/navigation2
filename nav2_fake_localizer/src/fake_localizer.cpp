@@ -85,13 +85,12 @@ set_parameters({rclcpp::Parameter("use_sim_time", true)});
   q.setEuler(-delta_yaw_, 0, 0);
   offset_tf_ = tf2::Transform(q, tf2::Vector3(-delta_x_, -delta_y_, 0.0));
 
-#if 0
   // Subscribe to odometry info
   filter_sub_ = new message_filters::Subscriber<nav_msgs::msg::Odometry>();
   filter_sub_->subscribe(temp_node, "tb3/odom");
 
   // and filter for the base_frame_id
-  filter_ = new tf2_ros::MessageFilter<nav_msgs::msg::Odometry>(*tf_buffer_, base_frame_id_, 1 /*100*/, temp_node);
+  filter_ = new tf2_ros::MessageFilter<nav_msgs::msg::Odometry>(*tf_buffer_, base_frame_id_, 100, temp_node);
   filter_->connectInput(*filter_sub_);
   filter_->registerCallback(&FakeLocalizer::update, this);
   filter_->registerFailureCallback(std::bind(&FakeLocalizer::odomFailure, this, _1));
@@ -105,38 +104,29 @@ set_parameters({rclcpp::Parameter("use_sim_time", true)});
   initial_pose_filter_->connectInput(*initial_pose_sub_);
   initial_pose_filter_->registerCallback(&FakeLocalizer::initialPoseReceived, this);
   initial_pose_filter_->registerFailureCallback(std::bind(&FakeLocalizer::poseFailure, this, _1));
-#else
-  filter_sub_ = create_subscription<nav_msgs::msg::Odometry>("tb3/odom",
-    std::bind(&FakeLocalizer::stuffFilter, this, std::placeholders::_1));
-
-  //initial_pose_sub_ = create_subscription<nav_msgs::msg::Odometry>("initial_pose",
-    //std::bind(&FakeLocalizer::initial_pose_sub_, this, std::placeholders::_1));
-#endif
 }
 
 // TODO: still have to do this?
-void FakeLocalizer::stuffFilter(const nav_msgs::msg::Odometry::SharedPtr /*odom_msg*/)
+void FakeLocalizer::stuffFilter(const nav_msgs::msg::Odometry::SharedPtr odom_msg)
 {
+  RCLCPP_INFO(get_logger(), "FakeLocalizer::stuffFilter");
+
   // We have to do this to force the message filter to wait for transforms
   // from odom_frame_id_ to base_frame_id_ to be available at time odom_msg.header.stamp.
   // Really, the base_pose_ground_truth should come in with no frame_id b/c it doesn't
   // make sense
 
-  RCLCPP_INFO(get_logger(), "FakeLocalizer::stuffFilter");
-#if 0
   auto stuff_msg = std::make_shared<nav_msgs::msg::Odometry>();
   *stuff_msg = *odom_msg;
   stuff_msg->header.frame_id = odom_frame_id_;
 
-  //filter_->add(stuff_msg);
-#endif
+  filter_->add(stuff_msg);
 }
 
-void FakeLocalizer::update(const nav_msgs::msg::Odometry::SharedPtr /*message*/)
+void FakeLocalizer::update(const nav_msgs::msg::Odometry & message)
 {
   RCLCPP_INFO(get_logger(), "FakeLocalizer::update");
 
-#if 0
   tf2::Transform txi;
   tf2::impl::Converter<true, false>::convert(message.pose.pose, txi);
   txi = offset_tf_ * txi;
@@ -190,30 +180,29 @@ void FakeLocalizer::update(const nav_msgs::msg::Odometry::SharedPtr /*message*/)
   // The particle cloud is the current position. Quite convenient.
   particle_cloud_.header = current_pose_.header;
   particle_cloud_.poses[0] = current_pose_.pose.pose;
+
   cloud_pub_->publish(particle_cloud_);
-#endif
 }
 
 void FakeLocalizer::initialPoseReceived(
-  const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr /*msg*/)
+  const geometry_msgs::msg::PoseWithCovarianceStamped & msg)
 {
   RCLCPP_INFO(get_logger(), "FakeLocalizer: initialPoseReceived");
 
-#if 0
   tf2::Transform pose;
-  tf2::impl::Converter<true, false>::convert(msg->pose.pose, pose);
+  tf2::impl::Converter<true, false>::convert(msg.pose.pose, pose);
 
-  if (msg->header.frame_id != global_frame_id_) {
+  if (msg.header.frame_id != global_frame_id_) {
     RCLCPP_WARN(get_logger(),
       "Frame ID of \"initialpose\" (%s) is different from the global frame %s",
-      msg->header.frame_id.c_str(), global_frame_id_.c_str());
+      msg.header.frame_id.c_str(), global_frame_id_.c_str());
   }
 
   // Set offset so that current pose is set to "initialpose"
   geometry_msgs::msg::TransformStamped baseInMap;
   try {
     // Convert the timestamp to a time_point
-    rclcpp::Time timestamp = msg->header.stamp;
+    rclcpp::Time timestamp = msg.header.stamp;
     tf2::TimePoint tf2_time(std::chrono::nanoseconds(timestamp.nanoseconds()));
     baseInMap = tf_buffer_->lookupTransform(base_frame_id_, global_frame_id_, tf2_time);
   } catch (tf2::TransformException) {
@@ -225,19 +214,16 @@ void FakeLocalizer::initialPoseReceived(
   tf2::impl::Converter<true, false>::convert(baseInMap.transform, baseInMapTf2);
   tf2::Transform delta = pose * baseInMapTf2;
   offset_tf_ = delta * offset_tf_;
-#endif
 }
 
-void
-FakeLocalizer::poseFailure(const message_filters::MessageEvent<const geometry_msgs::msg::PoseWithCovarianceStamped>& evt)
+void FakeLocalizer::poseFailure(const message_filters::MessageEvent<const geometry_msgs::msg::PoseWithCovarianceStamped>& evt)
 {
   auto msg = evt.getMessage();
   RCLCPP_INFO(get_logger(), "msg: %p", (void *) msg.get());
 
 }
 
-void 
-FakeLocalizer::odomFailure(const message_filters::MessageEvent<const nav_msgs::msg::Odometry>& evt)
+void FakeLocalizer::odomFailure(const message_filters::MessageEvent<const nav_msgs::msg::Odometry>& evt)
 {
   auto msg = evt.getMessage();
   RCLCPP_INFO(get_logger(), "msg: %p", (void *) msg.get());
