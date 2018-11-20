@@ -50,32 +50,20 @@ using namespace std::placeholders;
 namespace nav2_fake_localizer
 {
 
-class Notification
-{
-public:
-  Notification(int expected_count) :
-    count_(0), expected_count_(expected_count), failure_count_(0)
-  {
-  }
-
-  void notify(const nav_msgs::msg::Odometry::ConstPtr& /*message*/)
-  {
-    ++count_;
-  }
-
-  void failure(const nav_msgs::msg::Odometry::ConstPtr& /*message*/, tf2_ros::FilterFailureReason /*reason*/)
-  {
-    ++failure_count_;
-  }
-
-  int count_;
-  int expected_count_;
-  int failure_count_;
-};
-
 FakeLocalizer::FakeLocalizer(void)
 : Node("FakeLocalizer")
 {
+set_parameters({rclcpp::Parameter("use_sim_time", true)});
+
+  // Get the node parameters
+  get_parameter_or("odom_frame_id", odom_frame_id_, std::string("odom"));
+  get_parameter_or("base_frame_id", base_frame_id_, std::string("base_link"));
+  get_parameter_or("global_frame_id", global_frame_id_, std::string("/map"));
+  get_parameter_or("delta_x", delta_x_, 0.0);
+  get_parameter_or("delta_y", delta_y_, 0.0);
+  get_parameter_or("delta_yaw", delta_yaw_, 0.0);
+  get_parameter_or("transform_tolerance", transform_tolerance_, 0.1);
+
   auto temp_node = std::shared_ptr<rclcpp::Node>(this, [](auto) {});
 
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
@@ -89,15 +77,6 @@ FakeLocalizer::FakeLocalizer(void)
   stuff_sub_ = create_subscription<nav_msgs::msg::Odometry>("base_pose_ground_truth",
     std::bind(&FakeLocalizer::stuffFilter, this, std::placeholders::_1));
 
-  // Get the node parameters
-  get_parameter_or("odom_frame_id", odom_frame_id_, std::string("odom"));
-  get_parameter_or("base_frame_id", base_frame_id_, std::string("base_link"));
-  get_parameter_or("global_frame_id", global_frame_id_, std::string("/map"));
-  get_parameter_or("delta_x", delta_x_, 0.0);
-  get_parameter_or("delta_y", delta_y_, 0.0);
-  get_parameter_or("delta_yaw", delta_yaw_, 0.0);
-  get_parameter_or("transform_tolerance", transform_tolerance_, 0.1);
-
   particle_cloud_.header.stamp = now();
   particle_cloud_.header.frame_id = global_frame_id_;
   particle_cloud_.poses.resize(1);
@@ -106,18 +85,16 @@ FakeLocalizer::FakeLocalizer(void)
   q.setEuler(-delta_yaw_, 0, 0);
   offset_tf_ = tf2::Transform(q, tf2::Vector3(-delta_x_, -delta_y_, 0.0));
 
+#if 0
   // Subscribe to odometry info
   filter_sub_ = new message_filters::Subscriber<nav_msgs::msg::Odometry>();
-  filter_sub_->subscribe(temp_node, "odom");
+  filter_sub_->subscribe(temp_node, "tb3/odom");
 
   // and filter for the base_frame_id
-  filter_ = new tf2_ros::MessageFilter<nav_msgs::msg::Odometry>(*tf_buffer_, base_frame_id_, 100, temp_node);
+  filter_ = new tf2_ros::MessageFilter<nav_msgs::msg::Odometry>(*tf_buffer_, base_frame_id_, 1 /*100*/, temp_node);
   filter_->connectInput(*filter_sub_);
   filter_->registerCallback(&FakeLocalizer::update, this);
-Notification n(10);
-  //filter_->registerFailureCallback(std::bind(&FakeLocalizer::odomFailure, this, _1, _2));
-  //filter_->registerFailureCallback(std::bind(&Notification::failure, &n, _1, _2));
-
+  filter_->registerFailureCallback(std::bind(&FakeLocalizer::odomFailure, this, _1));
 
   // Subscribe to and filter "2D Pose Estimate" from RViz:
   initial_pose_sub_ = new message_filters::Subscriber<geometry_msgs::msg::PoseWithCovarianceStamped>();
@@ -127,26 +104,39 @@ Notification n(10);
   initial_pose_filter_ = new tf2_ros::MessageFilter<geometry_msgs::msg::PoseWithCovarianceStamped>(*tf_buffer_, global_frame_id_, 1, temp_node);
   initial_pose_filter_->connectInput(*initial_pose_sub_);
   initial_pose_filter_->registerCallback(&FakeLocalizer::initialPoseReceived, this);
-  //initial_pose_filter_->registerFailureCallback(std::bind(&FakeLocalizer::poseFailure, this, _1, _2));
+  initial_pose_filter_->registerFailureCallback(std::bind(&FakeLocalizer::poseFailure, this, _1));
+#else
+  filter_sub_ = create_subscription<nav_msgs::msg::Odometry>("tb3/odom",
+    std::bind(&FakeLocalizer::stuffFilter, this, std::placeholders::_1));
+
+  //initial_pose_sub_ = create_subscription<nav_msgs::msg::Odometry>("initial_pose",
+    //std::bind(&FakeLocalizer::initial_pose_sub_, this, std::placeholders::_1));
+#endif
 }
 
 // TODO: still have to do this?
-void FakeLocalizer::stuffFilter(const nav_msgs::msg::Odometry::SharedPtr odom_msg)
+void FakeLocalizer::stuffFilter(const nav_msgs::msg::Odometry::SharedPtr /*odom_msg*/)
 {
   // We have to do this to force the message filter to wait for transforms
   // from odom_frame_id_ to base_frame_id_ to be available at time odom_msg.header.stamp.
   // Really, the base_pose_ground_truth should come in with no frame_id b/c it doesn't
   // make sense
 
+  RCLCPP_INFO(get_logger(), "FakeLocalizer::stuffFilter");
+#if 0
   auto stuff_msg = std::make_shared<nav_msgs::msg::Odometry>();
   *stuff_msg = *odom_msg;
   stuff_msg->header.frame_id = odom_frame_id_;
 
-  filter_->add(stuff_msg);
+  //filter_->add(stuff_msg);
+#endif
 }
 
-void FakeLocalizer::update(const nav_msgs::msg::Odometry & message)
+void FakeLocalizer::update(const nav_msgs::msg::Odometry::SharedPtr /*message*/)
 {
+  RCLCPP_INFO(get_logger(), "FakeLocalizer::update");
+
+#if 0
   tf2::Transform txi;
   tf2::impl::Converter<true, false>::convert(message.pose.pose, txi);
   txi = offset_tf_ * txi;
@@ -201,13 +191,15 @@ void FakeLocalizer::update(const nav_msgs::msg::Odometry & message)
   particle_cloud_.header = current_pose_.header;
   particle_cloud_.poses[0] = current_pose_.pose.pose;
   cloud_pub_->publish(particle_cloud_);
+#endif
 }
 
 void FakeLocalizer::initialPoseReceived(
-  const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
+  const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr /*msg*/)
 {
   RCLCPP_INFO(get_logger(), "FakeLocalizer: initialPoseReceived");
 
+#if 0
   tf2::Transform pose;
   tf2::impl::Converter<true, false>::convert(msg->pose.pose, pose);
 
@@ -233,16 +225,22 @@ void FakeLocalizer::initialPoseReceived(
   tf2::impl::Converter<true, false>::convert(baseInMap.transform, baseInMapTf2);
   tf2::Transform delta = pose * baseInMapTf2;
   offset_tf_ = delta * offset_tf_;
+#endif
 }
 
 void
-FakeLocalizer::poseFailure(std::shared_ptr<const geometry_msgs::msg::PoseWithCovarianceStamped> & /*message*/, tf2_ros::FilterFailureReason /*reason*/)
+FakeLocalizer::poseFailure(const message_filters::MessageEvent<const geometry_msgs::msg::PoseWithCovarianceStamped>& evt)
 {
+  auto msg = evt.getMessage();
+  RCLCPP_INFO(get_logger(), "msg: %p", (void *) msg.get());
+
 }
 
 void 
-FakeLocalizer::odomFailure(std::shared_ptr<const nav_msgs::msg::Odometry> & /*message*/, tf2_ros::FilterFailureReason /*reason*/)
+FakeLocalizer::odomFailure(const message_filters::MessageEvent<const nav_msgs::msg::Odometry>& evt)
 {
+  auto msg = evt.getMessage();
+  RCLCPP_INFO(get_logger(), "msg: %p", (void *) msg.get());
 }
 
 }  // namespace nav2_fake_localizer
