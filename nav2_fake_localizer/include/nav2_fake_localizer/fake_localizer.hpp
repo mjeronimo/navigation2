@@ -59,11 +59,12 @@ public:
 protected:
   void stuffFilter(const nav_msgs::msg::Odometry::SharedPtr odom_msg);
 
-  void update(const nav_msgs::msg::Odometry &msg);
+  void update(const nav_msgs::msg::Odometry & msg);
   void initialPoseReceived(const geometry_msgs::msg::PoseWithCovarianceStamped & msg);
 
-  void poseFailure(const message_filters::MessageEvent<const geometry_msgs::msg::PoseWithCovarianceStamped>& evt);
-  void odomFailure(const message_filters::MessageEvent<const nav_msgs::msg::Odometry>& evt);
+  void poseFailure(
+    const message_filters::MessageEvent<const geometry_msgs::msg::PoseWithCovarianceStamped> & evt);
+  void odomFailure(const message_filters::MessageEvent<const nav_msgs::msg::Odometry> & evt);
 
   // Publishers and subscribers
   rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_pub_;

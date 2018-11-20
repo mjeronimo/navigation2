@@ -34,6 +34,7 @@
 
 #include "nav2_fake_localizer/fake_localizer.hpp"
 
+#include <string>
 #include <memory>
 #include <functional>
 #include "rclcpp/rclcpp.hpp"
@@ -53,7 +54,7 @@ namespace nav2_fake_localizer
 FakeLocalizer::FakeLocalizer(void)
 : Node("FakeLocalizer")
 {
-set_parameters({rclcpp::Parameter("use_sim_time", true)});
+  set_parameters({rclcpp::Parameter("use_sim_time", true)});
 
   // Get the node parameters
   get_parameter_or("odom_frame_id", odom_frame_id_, std::string("odom"));
@@ -75,7 +76,7 @@ set_parameters({rclcpp::Parameter("use_sim_time", true)});
 
   // Create the subscriber
   stuff_sub_ = create_subscription<nav_msgs::msg::Odometry>("base_pose_ground_truth",
-    std::bind(&FakeLocalizer::stuffFilter, this, std::placeholders::_1));
+      std::bind(&FakeLocalizer::stuffFilter, this, std::placeholders::_1));
 
   particle_cloud_.header.stamp = now();
   particle_cloud_.header.frame_id = global_frame_id_;
@@ -90,23 +91,25 @@ set_parameters({rclcpp::Parameter("use_sim_time", true)});
   filter_sub_->subscribe(temp_node, "tb3/odom");
 
   // and filter for the base_frame_id
-  filter_ = new tf2_ros::MessageFilter<nav_msgs::msg::Odometry>(*tf_buffer_, base_frame_id_, 100, temp_node);
+  filter_ = new tf2_ros::MessageFilter<nav_msgs::msg::Odometry>(*tf_buffer_, base_frame_id_, 100,
+      temp_node);
   filter_->connectInput(*filter_sub_);
   filter_->registerCallback(&FakeLocalizer::update, this);
   filter_->registerFailureCallback(std::bind(&FakeLocalizer::odomFailure, this, _1));
 
   // Subscribe to and filter "2D Pose Estimate" from RViz:
-  initial_pose_sub_ = new message_filters::Subscriber<geometry_msgs::msg::PoseWithCovarianceStamped>();
+  initial_pose_sub_ =
+    new message_filters::Subscriber<geometry_msgs::msg::PoseWithCovarianceStamped>();
   initial_pose_sub_->subscribe(temp_node, "initialpose");
 
   // and filter for the global_frame_id
-  initial_pose_filter_ = new tf2_ros::MessageFilter<geometry_msgs::msg::PoseWithCovarianceStamped>(*tf_buffer_, global_frame_id_, 1, temp_node);
+  initial_pose_filter_ = new tf2_ros::MessageFilter<geometry_msgs::msg::PoseWithCovarianceStamped>(
+    *tf_buffer_, global_frame_id_, 1, temp_node);
   initial_pose_filter_->connectInput(*initial_pose_sub_);
   initial_pose_filter_->registerCallback(&FakeLocalizer::initialPoseReceived, this);
   initial_pose_filter_->registerFailureCallback(std::bind(&FakeLocalizer::poseFailure, this, _1));
 }
 
-// TODO: still have to do this?
 void FakeLocalizer::stuffFilter(const nav_msgs::msg::Odometry::SharedPtr odom_msg)
 {
   RCLCPP_INFO(get_logger(), "FakeLocalizer::stuffFilter");
@@ -115,6 +118,8 @@ void FakeLocalizer::stuffFilter(const nav_msgs::msg::Odometry::SharedPtr odom_ms
   // from odom_frame_id_ to base_frame_id_ to be available at time odom_msg.header.stamp.
   // Really, the base_pose_ground_truth should come in with no frame_id b/c it doesn't
   // make sense
+
+  // TODO(mjeronimo): still have to do this with ROS2?
 
   auto stuff_msg = std::make_shared<nav_msgs::msg::Odometry>();
   *stuff_msg = *odom_msg;
@@ -216,18 +221,18 @@ void FakeLocalizer::initialPoseReceived(
   offset_tf_ = delta * offset_tf_;
 }
 
-void FakeLocalizer::poseFailure(const message_filters::MessageEvent<const geometry_msgs::msg::PoseWithCovarianceStamped>& evt)
+void FakeLocalizer::poseFailure(
+  const message_filters::MessageEvent<const geometry_msgs::msg::PoseWithCovarianceStamped> & evt)
 {
   auto msg = evt.getMessage();
   RCLCPP_INFO(get_logger(), "msg: %p", (void *) msg.get());
-
 }
 
-void FakeLocalizer::odomFailure(const message_filters::MessageEvent<const nav_msgs::msg::Odometry>& evt)
+void FakeLocalizer::odomFailure(
+  const message_filters::MessageEvent<const nav_msgs::msg::Odometry> & evt)
 {
   auto msg = evt.getMessage();
   RCLCPP_INFO(get_logger(), "msg: %p", (void *) msg.get());
 }
 
 }  // namespace nav2_fake_localizer
-
