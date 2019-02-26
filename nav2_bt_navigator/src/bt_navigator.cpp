@@ -47,7 +47,8 @@ BtNavigator::onConfigure(const rclcpp_lifecycle::State & state)
 
   task_server_ = std::make_unique<nav2_tasks::NavigateToPoseTaskServer>(shared_from_this());
   task_server_->onConfigure(state);
-  task_server_->setExecuteCallback(std::bind(&BtNavigator::navigateToPose, this, std::placeholders::_1));
+  task_server_->setExecuteCallback(
+    std::bind(&BtNavigator::navigateToPose, this, std::placeholders::_1));
 
   return nav2_lifecycle::CallbackReturn::SUCCESS;
 }
