@@ -14,9 +14,9 @@
 
 #include <memory>
 
+#include "rclcpp/rclcpp.hpp"
 #include "nav2_motion_primitives/back_up.hpp"
 #include "nav2_motion_primitives/spin.hpp"
-#include "rclcpp/rclcpp.hpp"
 
 int main(int argc, char ** argv)
 {
