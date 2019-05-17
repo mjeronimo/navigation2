@@ -17,28 +17,14 @@ import os
 from ament_index_python.packages import get_package_prefix
 from ament_index_python.packages import get_package_share_directory
 from launch.conditions import IfCondition
-from tempfile import NamedTemporaryFile
 
 import launch.actions
 import launch_ros.actions
-import yaml
-
-
-def create_params_file_from_dict(node_name, namespace, params):
-    with NamedTemporaryFile(mode='w', prefix='launch_params_', delete=False) as h:
-        param_file_path = h.name
-        param_dict = {node_name: {'ros__parameters': params}}
-        if namespace:
-            param_dict = {namespace: param_dict}
-        yaml.dump(param_dict, h, default_flow_style=False)
-        return param_file_path
 
 
 def generate_launch_description():
     # Get the launch directory
     launch_dir = os.path.join(get_package_share_directory('nav2_bringup'), 'launch')
-
-    print(launch_dir)
 
     # Create the launch configuration variables
     map_yaml_file = launch.substitutions.LaunchConfiguration('map')
@@ -83,8 +69,6 @@ def generate_launch_description():
         "yaml_filename" : "/home/mjeronimo/src/navigation2/nav2_bringup/launch/test_map.yaml"
     }
 
-    map_server_params_filename = create_params_file_from_dict("map_server", "", map_server_params)
-
     # Specify the actions
     start_gazebo_cmd = launch.actions.ExecuteProcess(
         condition=IfCondition(use_simulation),
@@ -116,7 +100,6 @@ def generate_launch_description():
             os.path.join(
                 get_package_prefix('nav2_map_server'),
                 'lib/nav2_map_server/map_server'),
-            #['__params:=', params_file], ['__params:=', map_server_params_filename]],
             ['__params:=', params_file]],
         cwd=[launch_dir], output='screen')
 
@@ -160,7 +143,7 @@ def generate_launch_description():
             ['__params:=', params_file]],
         cwd=[launch_dir], output='screen')
 
-    start_controller_cmd = launch.actions.ExecuteProcess(
+    start_lifecycle_manager_cmd = launch.actions.ExecuteProcess(
         cmd=[
             os.path.join(
                 get_package_prefix('nav2_lifecycle_manager'),
@@ -188,7 +171,7 @@ def generate_launch_description():
     ld.add_action(exit_event_handler)
 
     # Add the actions to launch all of the navigation nodes
-    ld.add_action(start_controller_cmd)
+    ld.add_action(start_lifecycle_manager_cmd)
     ld.add_action(start_map_server_cmd)
     ld.add_action(start_localizer_cmd)
     ld.add_action(start_world_model_cmd)

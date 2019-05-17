@@ -146,6 +146,7 @@ protected:
           return;
 
         default:
+          break;
       }
 
       loop_rate.sleep();
