@@ -35,7 +35,7 @@ public:
 
 protected:
   // The ROS node to use when calling lifecycle services
-  rclcpp::Node::SharedPtr service_client_node_;
+  rclcpp::Node::SharedPtr client_node_;
 
   // The services provided by this node
   rclcpp::Service<std_srvs::srv::Empty>::SharedPtr startup_srv_;

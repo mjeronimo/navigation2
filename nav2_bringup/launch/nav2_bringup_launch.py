@@ -180,7 +180,7 @@ def generate_launch_description():
     ld.add_action(exit_event_handler)
 
     # Add the actions to launch all of the navigation nodes
-    ld.add_action(start_lifecycle_manager_cmd)
+    #ld.add_action(start_lifecycle_manager_cmd)
     ld.add_action(start_map_server_cmd)
     ld.add_action(start_localizer_cmd)
     ld.add_action(start_world_model_cmd)

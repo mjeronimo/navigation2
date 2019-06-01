@@ -60,7 +60,7 @@ BtNavigator::on_configure(const rclcpp_lifecycle::State & /*state*/)
       std::bind(&BtNavigator::navigateToPose, this, std::placeholders::_1));
 
   // Create the class that registers our custom nodes and executes the BT
-  bt_ = std::make_unique<NavigateToPoseBehaviorTree>();
+  bt_ = std::make_unique<nav2_tasks::BehaviorTreeEngine>();
 
   // Create the path that will be returned from ComputePath and sent to FollowPath
   goal_ = std::make_shared<geometry_msgs::msg::PoseStamped>();

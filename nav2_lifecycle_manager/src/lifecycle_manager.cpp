@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
+#include "nav2_tasks/behavior_tree_engine.hpp"
 
 using namespace std::chrono_literals;
 using namespace std::placeholders;
@@ -58,7 +59,7 @@ LifecycleManager::LifecycleManager()
   resume_srv_ = create_service<std_srvs::srv::Empty>("lifecycle_manager/resume",
       std::bind(&LifecycleManager::resumeCallback, this, _1, _2, _3));
 
-  service_client_node_ = std::make_shared<rclcpp::Node>("lifecycle_manager_service_client");
+  client_node_ = std::make_shared<rclcpp::Node>("lifecycle_manager_service_client");
 
   if (autostart_) {
     startup();
@@ -112,7 +113,7 @@ LifecycleManager::createLifecycleServiceClients()
   message("Creating and initializing lifecycle service clients");
   for (auto & node_name : node_names_) {
     node_map_[node_name] =
-      std::make_shared<LifecycleServiceClient>(node_name, service_client_node_);
+      std::make_shared<LifecycleServiceClient>(node_name, client_node_);
   }
 }
 
@@ -167,6 +168,8 @@ void
 LifecycleManager::startup()
 {
   message("Starting the system bringup...");
+
+#if 0
   createLifecycleServiceClients();
   for (auto & node_name : node_names_) {
     if (!bringupNode(node_name)) {
@@ -174,6 +177,64 @@ LifecycleManager::startup()
       return;
     }
   }
+#else
+  // Get a convenient reference to the mission plan string
+const std::string xml_string = R"(
+ <root main_tree_to_execute = "MainTree" >
+     <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <BringUpNode name="map_server"/>
+        </Sequence>
+     </BehaviorTree> 
+ </root>
+ )";
+
+printf("0:\n");
+
+  // Create the blackboard that will be shared by all of the nodes in the tree
+  BT::Blackboard::Ptr blackboard = BT::Blackboard::create<BT::BlackboardLocal>();
+
+printf("0.0:\n");
+  // Set a couple values on the blackboard that all of the nodes require
+  blackboard->set<rclcpp::Node::SharedPtr>("node", client_node_);  // NOLINT
+  blackboard->set<std::chrono::milliseconds>("node_loop_timeout",  // NOLINT
+    std::chrono::milliseconds(100));
+
+printf("1:\n");
+  // Create the Behavior Tree for the startup
+  nav2_tasks::BehaviorTreeEngine bt;
+
+printf("2:\n");
+
+  // Run the Behavior Tree
+  //auto is_canceling = [goal_handle]() -> bool {return goal_handle->is_canceling();};
+  auto is_canceling = []() -> bool {return false; };
+  nav2_tasks::BtStatus rc = bt.run(blackboard, xml_string, is_canceling);
+  
+printf("3:\n");
+  // Handle the result
+  switch (rc) {
+    case nav2_tasks::BtStatus::SUCCEEDED:
+      //RCLCPP_INFO(get_logger(), "Mission succeeded");
+      message("Mission succeeded");
+      return;
+
+    case nav2_tasks::BtStatus::FAILED:
+      //RCLCPP_ERROR(get_logger(), "Mission failed");
+      message("Mission failed");
+      return;
+
+    case nav2_tasks::BtStatus::CANCELED:
+      //RCLCPP_INFO(get_logger(), "Mission canceled");
+      message("Mission canceled");
+      return;
+
+    default:
+      throw std::logic_error("Invalid status return from BT");
+  }
+
+printf("4:\n");
+#endif
   message("The system is active");
 }
 
