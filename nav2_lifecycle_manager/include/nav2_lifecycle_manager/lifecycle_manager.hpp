@@ -15,12 +15,9 @@
 #ifndef NAV2_LIFECYCLE_MANAGER__LIFECYCLE_MANAGER_HPP_
 #define NAV2_LIFECYCLE_MANAGER__LIFECYCLE_MANAGER_HPP_
 
-#include <map>
-#include <memory>
-#include <string>
-#include <vector>
+//#include <memory>
 
-#include "nav2_util/lifecycle_service_client.hpp"
+#include "nav2_tasks/behavior_tree_engine.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "std_srvs/srv/empty.hpp"
 
@@ -43,6 +40,7 @@ protected:
   rclcpp::Service<std_srvs::srv::Empty>::SharedPtr pause_srv_;
   rclcpp::Service<std_srvs::srv::Empty>::SharedPtr resume_srv_;
 
+  // The callbacks for the services
   void startupCallback(
     const std::shared_ptr<rmw_request_id_t> request_header,
     const std::shared_ptr<std_srvs::srv::Empty::Request> request,
@@ -64,30 +62,16 @@ protected:
     std::shared_ptr<std_srvs::srv::Empty::Response> response);
 
   // Support functions for the service calls
-  void startup();
-  void shutdown();
-  void pause();
-  void resume();
+  nav2_tasks::BtStatus startup();
+  nav2_tasks::BtStatus shutdown();
+  nav2_tasks::BtStatus pause();
+  nav2_tasks::BtStatus resume();
 
-  // Support functions for bring-up
-  void createLifecycleServiceClients();
-  bool bringupNode(const std::string & node_name);
+  // The Behavior Tree to be used for the various lifecycle manager operations
+  nav2_tasks::BehaviorTreeEngine bt_;
 
-  // Support functions for shutdown
-  void shutdownAllNodes();
-  void destroyLifecycleServiceClients();
-
-  // For each node in the map, transition to the new target state
-  void changeStateForAllNodes(std::uint8_t transition);
-
-  // Convenience function to highlight the output on the console
-  void message(const std::string & msg);
-
-  // A map of all nodes to be controlled
-  std::map<std::string, std::shared_ptr<nav2_util::LifecycleServiceClient>> node_map_;
-
-  // The names of the nodes to be managed, in the order of desired bring-up
-  std::vector<std::string> node_names_;
+  // The blackboard that will be provided to the BTs
+  BT::Blackboard::Ptr blackboard_;
 
   // Whether to automatically start up the system
   bool autostart_;

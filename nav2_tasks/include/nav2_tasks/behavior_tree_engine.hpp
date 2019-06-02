@@ -76,6 +76,12 @@ protected:
   BT::NodeStatus initialPoseReceived(BT::TreeNode & tree_node);
   BT::NodeStatus clearEntirelyCostmapServiceRequest(BT::TreeNode & tree_node);
   BT::NodeStatus bringUpNode(BT::TreeNode & tree_node);
+  BT::NodeStatus shutDownNode(BT::TreeNode & tree_node);
+  BT::NodeStatus pauseNode(BT::TreeNode & tree_node);
+  BT::NodeStatus message(BT::TreeNode & tree_node);
+
+  void registerSimpleActionWithParameters(const std::string& ID,
+    const BT::SimpleActionNode::TickFunctor& tick_functor, const BT:: NodeParameters & params);
 
   // Service clients
   std::unique_ptr<nav2_util::GlobalLocalizationServiceClient> global_localization_client_;

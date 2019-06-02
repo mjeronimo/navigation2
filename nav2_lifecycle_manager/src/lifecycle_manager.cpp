@@ -14,37 +14,141 @@
 
 #include "nav2_lifecycle_manager/lifecycle_manager.hpp"
 
-#include <chrono>
 #include <memory>
 #include <string>
-#include <vector>
 
 #include "rclcpp/rclcpp.hpp"
 #include "nav2_tasks/behavior_tree_engine.hpp"
 
-using namespace std::chrono_literals;
 using namespace std::placeholders;
-
-using lifecycle_msgs::msg::Transition;
-using nav2_util::LifecycleServiceClient;
 
 namespace nav2_lifecycle_manager
 {
+
+#if 0
+static const std::string startup_xml_string = R"(
+ <root main_tree_to_execute = "MainTree">
+     <BehaviorTree ID="MainTree">
+        <SequenceStar name="root_sequence">
+            <Message msg="Starting the system bringup..."/>
+            <Message msg="Configuring and activating map_server"/>
+            <BringUpNode node_name="map_server"/>
+            <Message msg="Configuring and activating amcl"/>
+            <BringUpNode node_name="amcl"/>
+            <Message msg="Configuring and activating world_model"/>
+            <BringUpNode node_name="world_model"/>
+            <Message msg="Configuring and activating dwb_controller"/>
+            <BringUpNode node_name="dwb_controller"/>
+            <Message msg="Configuring and activating navfn_planner"/>
+            <BringUpNode node_name="navfn_planner"/>
+            <Message msg="Configuring and activating bt_navigator"/>
+            <BringUpNode node_name="bt_navigator"/>
+            <Message msg="The system is active"/>
+        </SequenceStar>
+     </BehaviorTree> 
+ </root>
+      <Timeout msec="60000">
+      </Timeout>
+ )";
+#else
+static const std::string startup_xml_string = R"(
+<root main_tree_to_execute = "MainTree">
+  <BehaviorTree ID="MainTree">
+    <SequenceStar name="root_sequence">
+      <Message msg="Starting the system bringup..."/>
+      <Message msg="Configuring and activating map_server"/>
+      <BringUpNode node_name="map_server"/>
+      <Message msg="Configuring and activating amcl"/>
+      <BringUpNode node_name="amcl"/>
+      <Message msg="after amcl"/>
+      <Fallback>
+        <AlwaysFailure/>
+        <RateController hz="1.0">
+          <Message msg="Waiting for initial pose"/>
+        </RateController>
+        <Message msg="after RateController"/>
+      </Fallback>
+    </SequenceStar>
+  </BehaviorTree> 
+</root>
+ )";
+#endif
+
+static const std::string shutdown_xml_string = R"(
+ <root main_tree_to_execute = "MainTree">
+     <BehaviorTree ID="MainTree">
+        <SequenceStar name="root_sequence">
+            <Message msg="Shutting down the system..."/>
+            <Message msg="Deactivating, cleaning up, and shutting down bt_navigator"/>
+            <ShutDownNode node_name="bt_navigator"/>
+            <Message msg="Deactivating, cleaning up, and shutting down navfn_planner"/>
+            <ShutDownNode node_name="navfn_planner"/>
+            <Message msg="Deactivating, cleaning up, and shutting down dwb_controller"/>
+            <ShutDownNode node_name="dwb_controller"/>
+            <Message msg="Deactivating, cleaning up, and shutting down world_model"/>
+            <ShutDownNode node_name="world_model"/>
+            <Message msg="Deactivating, cleaning up, and shutting down amcl"/>
+            <ShutDownNode node_name="amcl"/>
+            <Message msg="Deactivating, cleaning up, and shutting down map_server"/>
+            <ShutDownNode node_name="map_server"/>
+            <Message msg="The system has been successfully shut down"/>
+        </SequenceStar>
+     </BehaviorTree> 
+ </root>
+ )";
+
+static const std::string pause_xml_string = R"(
+ <root main_tree_to_execute = "MainTree">
+     <BehaviorTree ID="MainTree">
+        <SequenceStar name="root_sequence">
+            <Message msg="Pausing the system..."/>
+            <Message msg="Pausing bt_navigator"/>
+            <PauseNode node_name="bt_navigator"/>
+            <Message msg="Pausing navfn_planner"/>
+            <PauseNode node_name="navfn_planner"/>
+            <Message msg="Pausing dwb_controller"/>
+            <PauseNode node_name="dwb_controller"/>
+            <Message msg="Pausing world_model"/>
+            <PauseNode node_name="world_model"/>
+            <Message msg="Pausing down amcl"/>
+            <PauseNode node_name="amcl"/>
+            <Message msg="Pausing map_server"/>
+            <PauseNode node_name="map_server"/>
+            <Message msg="The system has been successfully paused"/>
+        </SequenceStar>
+     </BehaviorTree> 
+ </root>
+ )";
+
+static const std::string resume_xml_string = R"(
+ <root main_tree_to_execute = "MainTree">
+     <BehaviorTree ID="MainTree">
+        <SequenceStar name="root_sequence">
+            <Message msg="Resuming the system..."/>
+            <Message msg="Configuring and activating map_server"/>
+            <BringUpNode node_name="map_server"/>
+            <Message msg="Configuring and activating amcl"/>
+            <BringUpNode node_name="amcl"/>
+            <Message msg="Configuring and activating world_model"/>
+            <BringUpNode node_name="world_model"/>
+            <Message msg="Configuring and activating dwb_controller"/>
+            <BringUpNode node_name="dwb_controller"/>
+            <Message msg="Configuring and activating navfn_planner"/>
+            <BringUpNode node_name="navfn_planner"/>
+            <Message msg="Configuring and activating bt_navigator"/>
+            <BringUpNode node_name="bt_navigator"/>
+            <Message msg="The system is active"/>
+        </SequenceStar>
+     </BehaviorTree> 
+ </root>
+ )";
 
 LifecycleManager::LifecycleManager()
 : Node("lifecycle_manager")
 {
   RCLCPP_INFO(get_logger(), "Creating");
 
-  // The default set of node names for the nav2 stack
-  std::vector<std::string> default_node_names{"map_server", "amcl", "world_model", "dwb_controller",
-    "navfn_planner", "bt_navigator"};
-
-  // The list of names is parameterized, allowing this module to be used with a different set of nodes
-  declare_parameter("node_names", rclcpp::ParameterValue(default_node_names));
   declare_parameter("autostart", rclcpp::ParameterValue(false));
-
-  get_parameter("node_names", node_names_);
   get_parameter("autostart", autostart_);
 
   startup_srv_ = create_service<std_srvs::srv::Empty>("lifecycle_manager/startup",
@@ -60,6 +164,14 @@ LifecycleManager::LifecycleManager()
       std::bind(&LifecycleManager::resumeCallback, this, _1, _2, _3));
 
   client_node_ = std::make_shared<rclcpp::Node>("lifecycle_manager_service_client");
+
+  // Create the blackboard that will be shared by all of the nodes in the tree
+  blackboard_ = BT::Blackboard::create<BT::BlackboardLocal>();
+
+  // Set a couple values on the blackboard that all of the nodes require
+  blackboard_->set<rclcpp::Node::SharedPtr>("node", client_node_);  // NOLINT
+  blackboard_->set<std::chrono::milliseconds>("node_loop_timeout",  // NOLINT
+    std::chrono::milliseconds(100));
 
   if (autostart_) {
     startup();
@@ -77,7 +189,24 @@ LifecycleManager::startupCallback(
   const std::shared_ptr<std_srvs::srv::Empty::Request>/*request*/,
   std::shared_ptr<std_srvs::srv::Empty::Response>/*response*/)
 {
-  startup();
+  auto rc = startup();
+  
+  // Handle the result
+  switch (rc) {
+    case nav2_tasks::BtStatus::SUCCEEDED:
+      return;
+
+    case nav2_tasks::BtStatus::FAILED:
+      //RCLCPP_ERROR(get_logger(), "Mission failed");
+      return;
+
+    case nav2_tasks::BtStatus::CANCELED:
+      //RCLCPP_INFO(get_logger(), "Mission canceled");
+      return;
+
+    default:
+      throw std::logic_error("Invalid status return from BT");
+  }
 }
 
 void
@@ -107,185 +236,32 @@ LifecycleManager::resumeCallback(
   resume();
 }
 
-void
-LifecycleManager::createLifecycleServiceClients()
-{
-  message("Creating and initializing lifecycle service clients");
-  for (auto & node_name : node_names_) {
-    node_map_[node_name] =
-      std::make_shared<LifecycleServiceClient>(node_name, client_node_);
-  }
-}
-
-void
-LifecycleManager::destroyLifecycleServiceClients()
-{
-  message("Destroying lifecycle service clients");
-  for (auto & kv : node_map_) {
-    kv.second.reset();
-  }
-}
-
-void
-LifecycleManager::changeStateForAllNodes(std::uint8_t transition)
-{
-  for (const auto & kv : node_map_) {
-    if (!kv.second->change_state(transition)) {
-      RCLCPP_ERROR(get_logger(), "Failed to change state for node: %s", kv.first.c_str());
-      return;
-    }
-  }
-}
-
-bool
-LifecycleManager::bringupNode(const std::string & node_name)
-{
-  message(std::string("Configuring and activating ") + node_name);
-  if (!node_map_[node_name]->change_state(Transition::TRANSITION_CONFIGURE)) {
-    RCLCPP_ERROR(get_logger(), "Failed to configure node: %s", node_name.c_str());
-    return false;
-  }
-
-  auto rc = node_map_[node_name]->change_state(Transition::TRANSITION_ACTIVATE);
-  if (!rc) {
-    RCLCPP_ERROR(get_logger(), "Failed to activate node: %s", node_name.c_str());
-    return false;
-  }
-
-  return true;
-}
-
-void
-LifecycleManager::shutdownAllNodes()
-{
-  message("Deactivate, cleanup, and shutdown nodes");
-  changeStateForAllNodes(Transition::TRANSITION_DEACTIVATE);
-  changeStateForAllNodes(Transition::TRANSITION_CLEANUP);
-  changeStateForAllNodes(Transition::TRANSITION_UNCONFIGURED_SHUTDOWN);
-}
-
-void
+nav2_tasks::BtStatus
 LifecycleManager::startup()
 {
-  message("Starting the system bringup...");
-
-#if 0
-  createLifecycleServiceClients();
-  for (auto & node_name : node_names_) {
-    if (!bringupNode(node_name)) {
-      RCLCPP_ERROR(get_logger(), "Failed to bring up node: %s, aboring bringup", node_name.c_str());
-      return;
-    }
-  }
-#else
-  // Get a convenient reference to the mission plan string
-const std::string xml_string = R"(
- <root main_tree_to_execute = "MainTree" >
-     <BehaviorTree ID="MainTree">
-        <Sequence name="root_sequence">
-            <BringUpNode name="map_server"/>
-        </Sequence>
-     </BehaviorTree> 
- </root>
- )";
-
-printf("0:\n");
-
-  // Create the blackboard that will be shared by all of the nodes in the tree
-  BT::Blackboard::Ptr blackboard = BT::Blackboard::create<BT::BlackboardLocal>();
-
-printf("0.0:\n");
-  // Set a couple values on the blackboard that all of the nodes require
-  blackboard->set<rclcpp::Node::SharedPtr>("node", client_node_);  // NOLINT
-  blackboard->set<std::chrono::milliseconds>("node_loop_timeout",  // NOLINT
-    std::chrono::milliseconds(100));
-
-printf("1:\n");
-  // Create the Behavior Tree for the startup
-  nav2_tasks::BehaviorTreeEngine bt;
-
-printf("2:\n");
-
-  // Run the Behavior Tree
-  //auto is_canceling = [goal_handle]() -> bool {return goal_handle->is_canceling();};
   auto is_canceling = []() -> bool {return false; };
-  nav2_tasks::BtStatus rc = bt.run(blackboard, xml_string, is_canceling);
-  
-printf("3:\n");
-  // Handle the result
-  switch (rc) {
-    case nav2_tasks::BtStatus::SUCCEEDED:
-      //RCLCPP_INFO(get_logger(), "Mission succeeded");
-      message("Mission succeeded");
-      return;
-
-    case nav2_tasks::BtStatus::FAILED:
-      //RCLCPP_ERROR(get_logger(), "Mission failed");
-      message("Mission failed");
-      return;
-
-    case nav2_tasks::BtStatus::CANCELED:
-      //RCLCPP_INFO(get_logger(), "Mission canceled");
-      message("Mission canceled");
-      return;
-
-    default:
-      throw std::logic_error("Invalid status return from BT");
-  }
-
-printf("4:\n");
-#endif
-  message("The system is active");
+  return bt_.run(blackboard_, startup_xml_string, is_canceling);
 }
 
-void
+nav2_tasks::BtStatus
 LifecycleManager::shutdown()
 {
-  message("Shutting down the system...");
-  shutdownAllNodes();
-  destroyLifecycleServiceClients();
-  message("The system has been sucessfully shut down");
+  auto is_canceling = []() -> bool {return false; };
+  return bt_.run(blackboard_, shutdown_xml_string, is_canceling);
 }
 
-void
+nav2_tasks::BtStatus
 LifecycleManager::pause()
 {
-  message("Pausing the system...");
-  for (const auto & kv : node_map_) {
-    if (!kv.second->change_state(Transition::TRANSITION_DEACTIVATE) ||
-      !kv.second->change_state(Transition::TRANSITION_CLEANUP))
-    {
-      RCLCPP_ERROR(get_logger(), "Failed to change state for node: %s", kv.first.c_str());
-      return;
-    }
-  }
-  message("The system has been paused");
+  auto is_canceling = []() -> bool {return false; };
+  return bt_.run(blackboard_, pause_xml_string, is_canceling);
 }
 
-void
+nav2_tasks::BtStatus
 LifecycleManager::resume()
 {
-  message("Resuming the system...");
-  for (auto & node_name : node_names_) {
-    if (!bringupNode(node_name)) {
-      RCLCPP_ERROR(get_logger(), "Failed to resume node: %s, aborting", node_name.c_str());
-      return;
-    }
-  }
-  message("The system has been resumed");
-}
-
-// TODO(mjeronimo): This is used to emphasize the major events during system bring-up and
-// shutdown so that the messgaes can be easily seen among the log output. We should replace
-// this with a ROS2-supported way of highlighting console output, if possible.
-
-#define ANSI_COLOR_RESET    "\x1b[0m"
-#define ANSI_COLOR_BLUE     "\x1b[34m"
-
-void
-LifecycleManager::message(const std::string & msg)
-{
-  RCLCPP_INFO(get_logger(), ANSI_COLOR_BLUE "\33[1m%s\33[0m" ANSI_COLOR_RESET, msg.c_str());
+  auto is_canceling = []() -> bool {return false; };
+  return bt_.run(blackboard_, resume_xml_string, is_canceling);
 }
 
 }  // namespace nav2_lifecycle_manager
