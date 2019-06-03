@@ -23,6 +23,7 @@
 #include "nav2_tasks/bt_conversions.hpp"
 #include "nav2_tasks/clear_entirely_costmap_service_client.hpp"
 #include "nav2_tasks/compute_path_to_pose_action.hpp"
+#include "nav2_tasks/conditional_loop_node.hpp"
 #include "nav2_tasks/follow_path_action.hpp"
 #include "nav2_tasks/goal_reached_condition.hpp"
 #include "nav2_tasks/is_localized_condition.hpp"
@@ -61,6 +62,7 @@ BehaviorTreeEngine::BehaviorTreeEngine()
 
   // Register our custom decorator nodes
   factory_.registerNodeType<nav2_tasks::RateController>("RateController");
+  factory_.registerNodeType<nav2_tasks::ConditionalLoop>("ConditionalLoop");
 
   // Register our simple action nodes
   factory_.registerSimpleAction("globalLocalizationServiceRequest",

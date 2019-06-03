@@ -25,34 +25,8 @@ using namespace std::placeholders;
 namespace nav2_lifecycle_manager
 {
 
-#if 0
-static const std::string startup_xml_string = R"(
- <root main_tree_to_execute = "MainTree">
-     <BehaviorTree ID="MainTree">
-        <SequenceStar name="root_sequence">
-            <Message msg="Starting the system bringup..."/>
-            <Message msg="Configuring and activating map_server"/>
-            <BringUpNode node_name="map_server"/>
-            <Message msg="Configuring and activating amcl"/>
-            <BringUpNode node_name="amcl"/>
-            <Message msg="Configuring and activating world_model"/>
-            <BringUpNode node_name="world_model"/>
-            <Message msg="Configuring and activating dwb_controller"/>
-            <BringUpNode node_name="dwb_controller"/>
-            <Message msg="Configuring and activating navfn_planner"/>
-            <BringUpNode node_name="navfn_planner"/>
-            <Message msg="Configuring and activating bt_navigator"/>
-            <BringUpNode node_name="bt_navigator"/>
-            <Message msg="The system is active"/>
-        </SequenceStar>
-     </BehaviorTree> 
- </root>
-      <Timeout msec="60000">
-      </Timeout>
- )";
-#else
-static const std::string startup_xml_string = R"(
-<root main_tree_to_execute = "MainTree">
+static const std::string simple_startup = R"(
+<root main_tree_to_execute="MainTree">
   <BehaviorTree ID="MainTree">
     <SequenceStar name="root_sequence">
       <Message msg="Starting the system bringup..."/>
@@ -60,87 +34,111 @@ static const std::string startup_xml_string = R"(
       <BringUpNode node_name="map_server"/>
       <Message msg="Configuring and activating amcl"/>
       <BringUpNode node_name="amcl"/>
-      <Message msg="after amcl"/>
-      <Fallback>
-        <AlwaysFailure/>
-        <RateController hz="1.0">
-          <Message msg="Waiting for initial pose"/>
-        </RateController>
-        <Message msg="after RateController"/>
-      </Fallback>
+      <Message msg="Configuring and activating world_model"/>
+      <BringUpNode node_name="world_model"/>
+      <Message msg="Configuring and activating dwb_controller"/>
+      <BringUpNode node_name="dwb_controller"/>
+      <Message msg="Configuring and activating navfn_planner"/>
+      <BringUpNode node_name="navfn_planner"/>
+      <Message msg="Configuring and activating bt_navigator"/>
+      <BringUpNode node_name="bt_navigator"/>
+      <Message msg="The system is active"/>
     </SequenceStar>
   </BehaviorTree> 
 </root>
  )";
-#endif
+
+static const std::string startup_with_manual_localization = R"(
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <SequenceStar name="LocalizationSequence">
+      <Message msg="Starting the system bringup..."/>
+      <Message msg="Configuring and activating map_server"/>
+      <BringUpNode node_name="map_server"/>
+      <Message msg="Configuring and activating amcl"/>
+      <BringUpNode node_name="amcl"/>
+      <Timeout msec="10000">
+        <ConditionalLoop target_value="initial_pose_received">
+          <Sequence>
+            <RateController hz="1.0">
+              <Message msg="Waiting for initial pose"/>
+            </RateController>
+            <IsLocalized/>
+          </Sequence>
+        </ConditionalLoop>
+      </Timeout>
+    </SequenceStar>
+  </BehaviorTree> 
+</root>
+ )";
 
 static const std::string shutdown_xml_string = R"(
- <root main_tree_to_execute = "MainTree">
-     <BehaviorTree ID="MainTree">
-        <SequenceStar name="root_sequence">
-            <Message msg="Shutting down the system..."/>
-            <Message msg="Deactivating, cleaning up, and shutting down bt_navigator"/>
-            <ShutDownNode node_name="bt_navigator"/>
-            <Message msg="Deactivating, cleaning up, and shutting down navfn_planner"/>
-            <ShutDownNode node_name="navfn_planner"/>
-            <Message msg="Deactivating, cleaning up, and shutting down dwb_controller"/>
-            <ShutDownNode node_name="dwb_controller"/>
-            <Message msg="Deactivating, cleaning up, and shutting down world_model"/>
-            <ShutDownNode node_name="world_model"/>
-            <Message msg="Deactivating, cleaning up, and shutting down amcl"/>
-            <ShutDownNode node_name="amcl"/>
-            <Message msg="Deactivating, cleaning up, and shutting down map_server"/>
-            <ShutDownNode node_name="map_server"/>
-            <Message msg="The system has been successfully shut down"/>
-        </SequenceStar>
-     </BehaviorTree> 
- </root>
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <SequenceStar name="root_sequence">
+      <Message msg="Shutting down the system..."/>
+      <Message msg="Deactivating, cleaning up, and shutting down bt_navigator"/>
+      <ShutDownNode node_name="bt_navigator"/>
+      <Message msg="Deactivating, cleaning up, and shutting down navfn_planner"/>
+      <ShutDownNode node_name="navfn_planner"/>
+      <Message msg="Deactivating, cleaning up, and shutting down dwb_controller"/>
+      <ShutDownNode node_name="dwb_controller"/>
+      <Message msg="Deactivating, cleaning up, and shutting down world_model"/>
+      <ShutDownNode node_name="world_model"/>
+      <Message msg="Deactivating, cleaning up, and shutting down amcl"/>
+      <ShutDownNode node_name="amcl"/>
+      <Message msg="Deactivating, cleaning up, and shutting down map_server"/>
+      <ShutDownNode node_name="map_server"/>
+      <Message msg="The system has been successfully shut down"/>
+  </SequenceStar>
+  </BehaviorTree> 
+</root>
  )";
 
 static const std::string pause_xml_string = R"(
- <root main_tree_to_execute = "MainTree">
-     <BehaviorTree ID="MainTree">
-        <SequenceStar name="root_sequence">
-            <Message msg="Pausing the system..."/>
-            <Message msg="Pausing bt_navigator"/>
-            <PauseNode node_name="bt_navigator"/>
-            <Message msg="Pausing navfn_planner"/>
-            <PauseNode node_name="navfn_planner"/>
-            <Message msg="Pausing dwb_controller"/>
-            <PauseNode node_name="dwb_controller"/>
-            <Message msg="Pausing world_model"/>
-            <PauseNode node_name="world_model"/>
-            <Message msg="Pausing down amcl"/>
-            <PauseNode node_name="amcl"/>
-            <Message msg="Pausing map_server"/>
-            <PauseNode node_name="map_server"/>
-            <Message msg="The system has been successfully paused"/>
-        </SequenceStar>
-     </BehaviorTree> 
- </root>
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <SequenceStar name="root_sequence">
+      <Message msg="Pausing the system..."/>
+      <Message msg="Pausing bt_navigator"/>
+      <PauseNode node_name="bt_navigator"/>
+      <Message msg="Pausing navfn_planner"/>
+      <PauseNode node_name="navfn_planner"/>
+      <Message msg="Pausing dwb_controller"/>
+      <PauseNode node_name="dwb_controller"/>
+      <Message msg="Pausing world_model"/>
+      <PauseNode node_name="world_model"/>
+      <Message msg="Pausing down amcl"/>
+      <PauseNode node_name="amcl"/>
+      <Message msg="Pausing map_server"/>
+      <PauseNode node_name="map_server"/>
+      <Message msg="The system has been successfully paused"/>
+    </SequenceStar>
+  </BehaviorTree> 
+</root>
  )";
 
 static const std::string resume_xml_string = R"(
- <root main_tree_to_execute = "MainTree">
-     <BehaviorTree ID="MainTree">
-        <SequenceStar name="root_sequence">
-            <Message msg="Resuming the system..."/>
-            <Message msg="Configuring and activating map_server"/>
-            <BringUpNode node_name="map_server"/>
-            <Message msg="Configuring and activating amcl"/>
-            <BringUpNode node_name="amcl"/>
-            <Message msg="Configuring and activating world_model"/>
-            <BringUpNode node_name="world_model"/>
-            <Message msg="Configuring and activating dwb_controller"/>
-            <BringUpNode node_name="dwb_controller"/>
-            <Message msg="Configuring and activating navfn_planner"/>
-            <BringUpNode node_name="navfn_planner"/>
-            <Message msg="Configuring and activating bt_navigator"/>
-            <BringUpNode node_name="bt_navigator"/>
-            <Message msg="The system is active"/>
-        </SequenceStar>
-     </BehaviorTree> 
- </root>
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <SequenceStar name="root_sequence">
+      <Message msg="Resuming the system..."/>
+      <Message msg="Configuring and activating map_server"/>
+      <BringUpNode node_name="map_server"/>
+      <Message msg="Configuring and activating amcl"/>
+      <BringUpNode node_name="amcl"/>
+      <Message msg="Configuring and activating world_model"/>
+      <BringUpNode node_name="world_model"/>
+      <Message msg="Configuring and activating dwb_controller"/>
+      <BringUpNode node_name="dwb_controller"/>
+      <Message msg="Configuring and activating navfn_planner"/>
+      <BringUpNode node_name="navfn_planner"/>
+      <Message msg="Configuring and activating bt_navigator"/>
+      <BringUpNode node_name="bt_navigator"/>
+      <Message msg="The system is active"/>
+    </SequenceStar>
+  </BehaviorTree> 
+</root>
  )";
 
 LifecycleManager::LifecycleManager()
@@ -198,12 +196,10 @@ LifecycleManager::startupCallback(
 
     case nav2_tasks::BtStatus::FAILED:
       //RCLCPP_ERROR(get_logger(), "Mission failed");
+      fprintf(stderr, "Startup failed!\n");
       return;
 
     case nav2_tasks::BtStatus::CANCELED:
-      //RCLCPP_INFO(get_logger(), "Mission canceled");
-      return;
-
     default:
       throw std::logic_error("Invalid status return from BT");
   }
@@ -239,29 +235,25 @@ LifecycleManager::resumeCallback(
 nav2_tasks::BtStatus
 LifecycleManager::startup()
 {
-  auto is_canceling = []() -> bool {return false; };
-  return bt_.run(blackboard_, startup_xml_string, is_canceling);
+  return bt_.run(blackboard_, startup_with_manual_localization);
 }
 
 nav2_tasks::BtStatus
 LifecycleManager::shutdown()
 {
-  auto is_canceling = []() -> bool {return false; };
-  return bt_.run(blackboard_, shutdown_xml_string, is_canceling);
+  return bt_.run(blackboard_, shutdown_xml_string);
 }
 
 nav2_tasks::BtStatus
 LifecycleManager::pause()
 {
-  auto is_canceling = []() -> bool {return false; };
-  return bt_.run(blackboard_, pause_xml_string, is_canceling);
+  return bt_.run(blackboard_, pause_xml_string);
 }
 
 nav2_tasks::BtStatus
 LifecycleManager::resume()
 {
-  auto is_canceling = []() -> bool {return false; };
-  return bt_.run(blackboard_, resume_xml_string, is_canceling);
+  return bt_.run(blackboard_, resume_xml_string);
 }
 
 }  // namespace nav2_lifecycle_manager

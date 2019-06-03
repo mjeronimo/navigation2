@@ -38,12 +38,12 @@ public:
   BtStatus run(
     BT::Blackboard::Ptr & blackboard,
     const std::string & behavior_tree_xml,
-    std::function<bool()> cancelRequested,
+    std::function<bool()> cancelRequested = []() -> bool {return false; },
     std::chrono::milliseconds loopTimeout = std::chrono::milliseconds(10));
 
   BtStatus run(
     std::unique_ptr<BT::Tree> & tree,
-    std::function<bool()> cancelRequested,
+    std::function<bool()> cancelRequested = []() -> bool {return false; },
     std::chrono::milliseconds loopTimeout = std::chrono::milliseconds(10));
 
   BT::Tree buildTreeFromText(std::string & xml_string, BT::Blackboard::Ptr blackboard);
