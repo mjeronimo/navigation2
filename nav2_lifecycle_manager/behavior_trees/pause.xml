@@ -1,0 +1,20 @@
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <SequenceStar name="root_sequence">
+      <Message msg="Pausing the system..."/>
+      <Message msg="Pausing bt_navigator"/>
+      <PauseNode node_name="bt_navigator"/>
+      <Message msg="Pausing navfn_planner"/>
+      <PauseNode node_name="navfn_planner"/>
+      <Message msg="Pausing dwb_controller"/>
+      <PauseNode node_name="dwb_controller"/>
+      <Message msg="Pausing world_model"/>
+      <PauseNode node_name="world_model"/>
+      <Message msg="Pausing down amcl"/>
+      <PauseNode node_name="amcl"/>
+      <Message msg="Pausing map_server"/>
+      <PauseNode node_name="map_server"/>
+      <Message msg="The system has been successfully paused"/>
+    </SequenceStar>
+  </BehaviorTree> 
+</root>

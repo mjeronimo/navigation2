@@ -48,7 +48,7 @@ private:
   double period_;
 };
 
-static bool first_time{false};
+//static bool first_time{false};
 
 inline BT::NodeStatus RateController::tick()
 {
@@ -56,7 +56,7 @@ inline BT::NodeStatus RateController::tick()
     // Reset the starting point since we're starting a new iteration of
     // the rate controller (moving from IDLE to RUNNING)
     start_ = std::chrono::high_resolution_clock::now();
-    first_time = true;
+    //first_time = true;
   }
 
   setStatus(BT::NodeStatus::RUNNING);
@@ -70,8 +70,8 @@ inline BT::NodeStatus RateController::tick()
   auto seconds = std::chrono::duration_cast<float_seconds>(elapsed);
 
   // If we've exceed the specified period, execute the child node
-  if (first_time || seconds.count() >= period_) {
-    first_time = false;
+  if (/*first_time || */seconds.count() >= period_) {
+    //first_time = false;
     const BT::NodeStatus child_state = child_node_->executeTick();
 
     switch (child_state) {

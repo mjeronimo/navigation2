@@ -1,0 +1,12 @@
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <SequenceStar name="root_sequence">
+      <BringUpNode node_name="map_server"/>
+      <BringUpNode node_name="amcl"/>
+      <BringUpNode node_name="world_model"/>
+      <BringUpNode node_name="dwb_controller"/>
+      <BringUpNode node_name="navfn_planner"/>
+      <BringUpNode node_name="bt_navigator"/>
+    </SequenceStar>
+  </BehaviorTree> 
+</root>

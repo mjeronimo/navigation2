@@ -49,6 +49,14 @@ inline BT::NodeStatus ConditionalLoop::tick()
 
   /*const BT::NodeStatus child_state =*/ child_node_->executeTick();
 
+  bool initial_pose_received = false;
+  blackboard()->get<bool>("initial_pose_received", initial_pose_received);
+
+  if (initial_pose_received) {
+    printf("ConditionalLoop: initial_pose_received: %d\n", (int) initial_pose_received);
+    return BT::NodeStatus::SUCCESS;
+  }
+
 #if 0
   switch (child_state) {
     case BT::NodeStatus::RUNNING:

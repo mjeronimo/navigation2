@@ -1,0 +1,38 @@
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <SequenceStar name="StartupWithManualLocalization">
+      <SequenceStar name="Localization">
+        <Message msg="Starting the system bringup..."/>
+        <Message msg="Configuring and activating map_server"/>
+        <BringUpNode node_name="map_server"/>
+        <Message msg="Configuring and activating amcl"/>
+        <BringUpNode node_name="amcl"/>
+        <Timeout msec="10000">
+          <ConditionalLoop key="initial_pose_received" value="true">
+            <Fallback>
+              <Sequence>
+                <InitialPoseReceived/>
+                <SetCondition key="initial_pose_received" value="true"/>
+              </Sequence>
+              <RateController hz="1.0" skip_first="true">
+                <Message msg="Waiting for initial pose..."/>
+              </RateController>
+            </Fallback>
+          </ConditionalLoop>
+        </Timeout>
+      </SequenceStar>
+      <SequenceStar name="BringUpRemainingNodes">
+        <Message msg="Configuring and activating world_model"/>
+        <BringUpNode node_name="world_model"/>
+        <Message msg="Configuring and activating dwb_controller"/>
+        <BringUpNode node_name="dwb_controller"/>
+        <Message msg="Configuring and activating navfn_planner"/>
+        <BringUpNode node_name="navfn_planner"/>
+        <Message msg="Configuring and activating bt_navigator"/>
+        <BringUpNode node_name="bt_navigator"/>
+      </SequenceStar>
+      <Message msg="The system is active"/>
+    </SequenceStar>
+  </BehaviorTree> 
+</root>
+

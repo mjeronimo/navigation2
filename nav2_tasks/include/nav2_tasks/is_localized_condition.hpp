@@ -71,6 +71,7 @@ public:
 
     if (!robot_->getCurrentPose(current_pose)) {
       RCLCPP_DEBUG(node_->get_logger(), "Current robot pose is not available.");
+  RCLCPP_INFO(node_->get_logger(), "Current robot pose is not available.");
       return false;
     }
 
@@ -80,11 +81,12 @@ public:
       current_pose->pose.covariance[cov_y_] < y_tol_ &&
       current_pose->pose.covariance[cov_a_] < rot_tol_)
     {
-      RCLCPP_INFO(node_->get_logger(), "AutoLocalization Passed!");
+      RCLCPP_INFO(node_->get_logger(), "Initial pose received");
       blackboard()->set<bool>("initial_pose_received", true);  // NOLINT
       return true;
     }
 
+    RCLCPP_INFO(node_->get_logger(), "Initial pose NOT received");
     return false;
   }
 

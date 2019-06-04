@@ -128,7 +128,7 @@ public:
 
     // Creating fake publishers
     pose_pub_ = client_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
-      "amcl_pose", rclcpp::SystemDefaultsQoS().transient_local());
+      "amcl_pose", rclcpp::SystemDefaultsQoS().transient_local().reliable());
 
     odom_pub_ = client_->create_publisher<nav_msgs::msg::Odometry>(
       "odom", rclcpp::SystemDefaultsQoS());

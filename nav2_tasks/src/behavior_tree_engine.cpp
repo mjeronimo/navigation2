@@ -26,6 +26,7 @@
 #include "nav2_tasks/conditional_loop_node.hpp"
 #include "nav2_tasks/follow_path_action.hpp"
 #include "nav2_tasks/goal_reached_condition.hpp"
+#include "nav2_tasks/initial_pose_received_condition.hpp"
 #include "nav2_tasks/is_localized_condition.hpp"
 #include "nav2_tasks/is_stuck_condition.hpp"
 #include "nav2_tasks/navigate_to_pose_action.hpp"
@@ -55,6 +56,7 @@ BehaviorTreeEngine::BehaviorTreeEngine()
   factory_.registerNodeType<nav2_tasks::IsStuckCondition>("IsStuck");
   factory_.registerNodeType<nav2_tasks::IsLocalizedCondition>("IsLocalized");
   factory_.registerNodeType<nav2_tasks::GoalReachedCondition>("GoalReached");
+  factory_.registerNodeType<nav2_tasks::InitialPoseReceivedCondition>("InitialPoseReceived");
 
   // Register our simple condition nodes
   factory_.registerSimpleCondition("initialPoseReceived",
@@ -91,6 +93,11 @@ BehaviorTreeEngine::BehaviorTreeEngine()
   registerSimpleActionWithParameters("Message",
     std::bind(&BehaviorTreeEngine::message, this, std::placeholders::_1),
 	  message_params);
+
+  const BT::NodeParameters set_condition_params {{"key", "unknown"}, {"value", "unknown"}};
+  registerSimpleActionWithParameters("SetCondition",
+    std::bind(&BehaviorTreeEngine::setCondition, this, std::placeholders::_1),
+	  set_condition_params);
 
   global_localization_client_ =
     std::make_unique<nav2_util::GlobalLocalizationServiceClient>("bt_navigator");
@@ -281,6 +288,20 @@ BehaviorTreeEngine::message(BT::TreeNode & tree_node)
   tree_node.getParam<std::string>("msg", msg);
 
   RCLCPP_INFO(service_client_node_->get_logger(), ANSI_COLOR_BLUE "\33[1m%s\33[0m" ANSI_COLOR_RESET, msg.c_str());
+
+  return BT::NodeStatus::SUCCESS;
+}
+
+BT::NodeStatus
+BehaviorTreeEngine::setCondition(BT::TreeNode & tree_node)
+{
+  std::string key;
+  tree_node.getParam<std::string>("key", key);
+
+  std::string value;
+  tree_node.getParam<std::string>("value", value);
+
+  tree_node.blackboard()->template set<bool>(key, value=="true"? true : false);
 
   return BT::NodeStatus::SUCCESS;
 }

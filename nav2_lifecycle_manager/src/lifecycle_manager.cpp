@@ -14,6 +14,7 @@
 
 #include "nav2_lifecycle_manager/lifecycle_manager.hpp"
 
+#include <fstream>
 #include <memory>
 #include <string>
 
@@ -25,130 +26,22 @@ using namespace std::placeholders;
 namespace nav2_lifecycle_manager
 {
 
-static const std::string simple_startup = R"(
-<root main_tree_to_execute="MainTree">
-  <BehaviorTree ID="MainTree">
-    <SequenceStar name="root_sequence">
-      <Message msg="Starting the system bringup..."/>
-      <Message msg="Configuring and activating map_server"/>
-      <BringUpNode node_name="map_server"/>
-      <Message msg="Configuring and activating amcl"/>
-      <BringUpNode node_name="amcl"/>
-      <Message msg="Configuring and activating world_model"/>
-      <BringUpNode node_name="world_model"/>
-      <Message msg="Configuring and activating dwb_controller"/>
-      <BringUpNode node_name="dwb_controller"/>
-      <Message msg="Configuring and activating navfn_planner"/>
-      <BringUpNode node_name="navfn_planner"/>
-      <Message msg="Configuring and activating bt_navigator"/>
-      <BringUpNode node_name="bt_navigator"/>
-      <Message msg="The system is active"/>
-    </SequenceStar>
-  </BehaviorTree> 
-</root>
- )";
-
-static const std::string startup_with_manual_localization = R"(
-<root main_tree_to_execute="MainTree">
-  <BehaviorTree ID="MainTree">
-    <SequenceStar name="LocalizationSequence">
-      <Message msg="Starting the system bringup..."/>
-      <Message msg="Configuring and activating map_server"/>
-      <BringUpNode node_name="map_server"/>
-      <Message msg="Configuring and activating amcl"/>
-      <BringUpNode node_name="amcl"/>
-      <Timeout msec="10000">
-        <ConditionalLoop target_value="initial_pose_received">
-          <Sequence>
-            <RateController hz="1.0">
-              <Message msg="Waiting for initial pose"/>
-            </RateController>
-            <IsLocalized/>
-          </Sequence>
-        </ConditionalLoop>
-      </Timeout>
-    </SequenceStar>
-  </BehaviorTree> 
-</root>
- )";
-
-static const std::string shutdown_xml_string = R"(
-<root main_tree_to_execute="MainTree">
-  <BehaviorTree ID="MainTree">
-    <SequenceStar name="root_sequence">
-      <Message msg="Shutting down the system..."/>
-      <Message msg="Deactivating, cleaning up, and shutting down bt_navigator"/>
-      <ShutDownNode node_name="bt_navigator"/>
-      <Message msg="Deactivating, cleaning up, and shutting down navfn_planner"/>
-      <ShutDownNode node_name="navfn_planner"/>
-      <Message msg="Deactivating, cleaning up, and shutting down dwb_controller"/>
-      <ShutDownNode node_name="dwb_controller"/>
-      <Message msg="Deactivating, cleaning up, and shutting down world_model"/>
-      <ShutDownNode node_name="world_model"/>
-      <Message msg="Deactivating, cleaning up, and shutting down amcl"/>
-      <ShutDownNode node_name="amcl"/>
-      <Message msg="Deactivating, cleaning up, and shutting down map_server"/>
-      <ShutDownNode node_name="map_server"/>
-      <Message msg="The system has been successfully shut down"/>
-  </SequenceStar>
-  </BehaviorTree> 
-</root>
- )";
-
-static const std::string pause_xml_string = R"(
-<root main_tree_to_execute="MainTree">
-  <BehaviorTree ID="MainTree">
-    <SequenceStar name="root_sequence">
-      <Message msg="Pausing the system..."/>
-      <Message msg="Pausing bt_navigator"/>
-      <PauseNode node_name="bt_navigator"/>
-      <Message msg="Pausing navfn_planner"/>
-      <PauseNode node_name="navfn_planner"/>
-      <Message msg="Pausing dwb_controller"/>
-      <PauseNode node_name="dwb_controller"/>
-      <Message msg="Pausing world_model"/>
-      <PauseNode node_name="world_model"/>
-      <Message msg="Pausing down amcl"/>
-      <PauseNode node_name="amcl"/>
-      <Message msg="Pausing map_server"/>
-      <PauseNode node_name="map_server"/>
-      <Message msg="The system has been successfully paused"/>
-    </SequenceStar>
-  </BehaviorTree> 
-</root>
- )";
-
-static const std::string resume_xml_string = R"(
-<root main_tree_to_execute="MainTree">
-  <BehaviorTree ID="MainTree">
-    <SequenceStar name="root_sequence">
-      <Message msg="Resuming the system..."/>
-      <Message msg="Configuring and activating map_server"/>
-      <BringUpNode node_name="map_server"/>
-      <Message msg="Configuring and activating amcl"/>
-      <BringUpNode node_name="amcl"/>
-      <Message msg="Configuring and activating world_model"/>
-      <BringUpNode node_name="world_model"/>
-      <Message msg="Configuring and activating dwb_controller"/>
-      <BringUpNode node_name="dwb_controller"/>
-      <Message msg="Configuring and activating navfn_planner"/>
-      <BringUpNode node_name="navfn_planner"/>
-      <Message msg="Configuring and activating bt_navigator"/>
-      <BringUpNode node_name="bt_navigator"/>
-      <Message msg="The system is active"/>
-    </SequenceStar>
-  </BehaviorTree> 
-</root>
- )";
-
 LifecycleManager::LifecycleManager()
 : Node("lifecycle_manager")
 {
   RCLCPP_INFO(get_logger(), "Creating");
 
+  // The lifecycle manager can automatically start the stack, which is the equivalent of invoking
+  // the 'startup' service
   declare_parameter("autostart", rclcpp::ParameterValue(false));
-  get_parameter("autostart", autostart_);
 
+  // Each of the lifecycle manager's services has a corresponiding BT XML file, specified by a parameter
+  declare_parameter("bt_xml_filename.startup", rclcpp::ParameterValue(std::string("startup.xml")));
+  declare_parameter("bt_xml_filename.shutdown", rclcpp::ParameterValue(std::string("shutdown.xml")));
+  declare_parameter("bt_xml_filename.pause", rclcpp::ParameterValue(std::string("pause.xml")));
+  declare_parameter("bt_xml_filename.resume", rclcpp::ParameterValue(std::string("resume.xml")));
+
+  // Create the services provided by the lifecycle manager
   startup_srv_ = create_service<std_srvs::srv::Empty>("lifecycle_manager/startup",
       std::bind(&LifecycleManager::startupCallback, this, _1, _2, _3));
 
@@ -163,7 +56,7 @@ LifecycleManager::LifecycleManager()
 
   client_node_ = std::make_shared<rclcpp::Node>("lifecycle_manager_service_client");
 
-  // Create the blackboard that will be shared by all of the nodes in the tree
+  // Create the blackboard that will be shared by all of the nodes in the Behavior Trees
   blackboard_ = BT::Blackboard::create<BT::BlackboardLocal>();
 
   // Set a couple values on the blackboard that all of the nodes require
@@ -171,8 +64,10 @@ LifecycleManager::LifecycleManager()
   blackboard_->set<std::chrono::milliseconds>("node_loop_timeout",  // NOLINT
     std::chrono::milliseconds(100));
 
+  // Autostart, if requested via the parameter
+  get_parameter("autostart", autostart_);
   if (autostart_) {
-    startup();
+    loadAndExecute("bt_xml_filename.startup");
   }
 }
 
@@ -187,16 +82,14 @@ LifecycleManager::startupCallback(
   const std::shared_ptr<std_srvs::srv::Empty::Request>/*request*/,
   std::shared_ptr<std_srvs::srv::Empty::Response>/*response*/)
 {
-  auto rc = startup();
-  
-  // Handle the result
-  switch (rc) {
+  switch (loadAndExecute("bt_xml_filename.startup"))
+  {
     case nav2_tasks::BtStatus::SUCCEEDED:
+      RCLCPP_INFO(get_logger(), "Startup succeeded!");
       return;
 
     case nav2_tasks::BtStatus::FAILED:
-      //RCLCPP_ERROR(get_logger(), "Mission failed");
-      fprintf(stderr, "Startup failed!\n");
+      RCLCPP_ERROR(get_logger(), "Startup failed!");
       return;
 
     case nav2_tasks::BtStatus::CANCELED:
@@ -211,7 +104,19 @@ LifecycleManager::shutdownCallback(
   const std::shared_ptr<std_srvs::srv::Empty::Request>/*request*/,
   std::shared_ptr<std_srvs::srv::Empty::Response>/*response*/)
 {
-  shutdown();
+  switch (loadAndExecute("bt_xml_filename.shutdown"))
+  {
+    case nav2_tasks::BtStatus::SUCCEEDED:
+      return;
+
+    case nav2_tasks::BtStatus::FAILED:
+      RCLCPP_ERROR(get_logger(), "Startup failed!");
+      return;
+
+    case nav2_tasks::BtStatus::CANCELED:
+    default:
+      throw std::logic_error("Invalid status return from BT");
+  }
 }
 
 void
@@ -220,7 +125,19 @@ LifecycleManager::pauseCallback(
   const std::shared_ptr<std_srvs::srv::Empty::Request>/*request*/,
   std::shared_ptr<std_srvs::srv::Empty::Response>/*response*/)
 {
-  pause();
+  switch (loadAndExecute("bt_xml_filename.pause"))
+  {
+    case nav2_tasks::BtStatus::SUCCEEDED:
+      return;
+
+    case nav2_tasks::BtStatus::FAILED:
+      RCLCPP_ERROR(get_logger(), "Startup failed!");
+      return;
+
+    case nav2_tasks::BtStatus::CANCELED:
+    default:
+      throw std::logic_error("Invalid status return from BT");
+  }
 }
 
 void
@@ -229,31 +146,40 @@ LifecycleManager::resumeCallback(
   const std::shared_ptr<std_srvs::srv::Empty::Request>/*request*/,
   std::shared_ptr<std_srvs::srv::Empty::Response>/*response*/)
 {
-  resume();
+  switch (loadAndExecute("bt_xml_filename.resume"))
+  {
+    case nav2_tasks::BtStatus::SUCCEEDED:
+      return;
+
+    case nav2_tasks::BtStatus::FAILED:
+      RCLCPP_ERROR(get_logger(), "Startup failed!");
+      return;
+
+    case nav2_tasks::BtStatus::CANCELED:
+    default:
+      throw std::logic_error("Invalid status return from BT");
+  }
 }
 
 nav2_tasks::BtStatus
-LifecycleManager::startup()
+LifecycleManager::loadAndExecute(const std::string & parameter_name)
 {
-  return bt_.run(blackboard_, startup_with_manual_localization);
-}
+  // Get the BT filename to use from the parameter
+  std::string xml_filename;
+  get_parameter(parameter_name, xml_filename);
 
-nav2_tasks::BtStatus
-LifecycleManager::shutdown()
-{
-  return bt_.run(blackboard_, shutdown_xml_string);
-}
+  // Read the input BT XML from the specified file into a string
+  std::ifstream xml_file(xml_filename);
 
-nav2_tasks::BtStatus
-LifecycleManager::pause()
-{
-  return bt_.run(blackboard_, pause_xml_string);
-}
+  if (!xml_file.good()) {
+    RCLCPP_ERROR(get_logger(), "Couldn't open input XML file: %s", xml_filename.c_str());
+    return nav2_tasks::BtStatus::FAILED;
+  }
 
-nav2_tasks::BtStatus
-LifecycleManager::resume()
-{
-  return bt_.run(blackboard_, resume_xml_string);
+  std::string xml_string = std::string(std::istreambuf_iterator<char>(xml_file),
+      std::istreambuf_iterator<char>());
+
+  return bt_.run(blackboard_, xml_string);
 }
 
 }  // namespace nav2_lifecycle_manager

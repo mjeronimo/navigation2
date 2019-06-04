@@ -1022,6 +1022,8 @@ AmclNode::initTransforms()
 void
 AmclNode::initMessageFilters()
 {
+  RCLCPP_INFO(get_logger(), "initMessageFilters");
+
   laser_scan_sub_ = std::make_unique<message_filters::Subscriber<sensor_msgs::msg::LaserScan>>(
     rclcpp_node_.get(), scan_topic_, rmw_qos_profile_sensor_data);
 
@@ -1051,6 +1053,8 @@ AmclNode::initPubSub()
 void
 AmclNode::initServices()
 {
+  RCLCPP_INFO(get_logger(), "initServices");
+
   global_loc_srv_ = create_service<std_srvs::srv::Empty>("global_localization",
       std::bind(&AmclNode::globalLocalizationCallback, this, _1, _2, _3));
 
@@ -1061,6 +1065,8 @@ AmclNode::initServices()
 void
 AmclNode::initOdometry()
 {
+  RCLCPP_INFO(get_logger(), "initOdometry");
+
   // TODO(mjeronimo): We should handle persistance of the last known pose of the robot. We could
   // then read that pose here and initialize using that.
 
@@ -1082,6 +1088,8 @@ AmclNode::initOdometry()
 void
 AmclNode::initParticleFilter()
 {
+  RCLCPP_INFO(get_logger(), "initParticleFilter");
+
   // Create the particle filter
   pf_ = pf_alloc(min_particles_, max_particles_, alpha_slow_, alpha_fast_,
       (pf_init_model_fn_t)AmclNode::uniformPoseGenerator,
@@ -1110,6 +1118,8 @@ AmclNode::initParticleFilter()
 void
 AmclNode::initLaserScan()
 {
+  RCLCPP_INFO(get_logger(), "initLaserScan");
+
   scan_error_count_ = 0;
   memset(&last_laser_received_ts_, 0, sizeof(last_laser_received_ts_));
 }

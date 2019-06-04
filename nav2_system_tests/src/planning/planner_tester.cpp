@@ -47,7 +47,8 @@ PlannerTester::PlannerTester()
   }
 
   // Publisher of the faked current robot pose
-  pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("amcl_pose");
+  pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("amcl_pose",
+    rclcpp::SystemDefaultsQoS().transient_local().reliable());
 
   // For visualization, we'll publish the map and the path endpoints
   map_pub_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>("map");

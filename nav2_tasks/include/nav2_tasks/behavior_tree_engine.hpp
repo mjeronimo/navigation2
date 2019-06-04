@@ -79,6 +79,7 @@ protected:
   BT::NodeStatus shutDownNode(BT::TreeNode & tree_node);
   BT::NodeStatus pauseNode(BT::TreeNode & tree_node);
   BT::NodeStatus message(BT::TreeNode & tree_node);
+  BT::NodeStatus setCondition(BT::TreeNode & tree_node);
 
   void registerSimpleActionWithParameters(const std::string& ID,
     const BT::SimpleActionNode::TickFunctor& tick_functor, const BT:: NodeParameters & params);

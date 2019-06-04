@@ -61,11 +61,7 @@ protected:
     const std::shared_ptr<std_srvs::srv::Empty::Request> request,
     std::shared_ptr<std_srvs::srv::Empty::Response> response);
 
-  // Support functions for the service calls
-  nav2_tasks::BtStatus startup();
-  nav2_tasks::BtStatus shutdown();
-  nav2_tasks::BtStatus pause();
-  nav2_tasks::BtStatus resume();
+  nav2_tasks::BtStatus loadAndExecute(const std::string & parameter_name);
 
   // The Behavior Tree to be used for the various lifecycle manager operations
   nav2_tasks::BehaviorTreeEngine bt_;
