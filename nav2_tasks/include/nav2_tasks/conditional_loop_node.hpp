@@ -59,12 +59,6 @@ inline BT::NodeStatus ConditionalLoop::tick()
   bool current_value = false;
   blackboard()->get<bool>(key_, current_value);
 
-  if (current_value == target_value_) {
-     printf("!!!!!!!!!!!!!key: %s\n", key_.c_str());
-     printf("!!!!!!!!!!!!!target_value: %d\n", (int) current_value);
-     printf("!!!!!!!!!!!!!current_value: %d\n", (int) target_value_);
-  }
-
   return (current_value == target_value_)? BT::NodeStatus::SUCCESS : BT::NodeStatus::RUNNING;
 }
 

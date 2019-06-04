@@ -164,6 +164,8 @@ LifecycleManager::resumeCallback(
 nav2_tasks::BtStatus
 LifecycleManager::loadAndExecute(const std::string & parameter_name)
 {
+  nav2_tasks::BehaviorTreeEngine bt;
+
   // Get the BT filename to use from the parameter
   std::string xml_filename;
   get_parameter(parameter_name, xml_filename);
@@ -179,7 +181,7 @@ LifecycleManager::loadAndExecute(const std::string & parameter_name)
   std::string xml_string = std::string(std::istreambuf_iterator<char>(xml_file),
       std::istreambuf_iterator<char>());
 
-  return bt_.run(blackboard_, xml_string);
+  return bt.run(blackboard_, xml_string);
 }
 
 }  // namespace nav2_lifecycle_manager

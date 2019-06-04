@@ -119,6 +119,13 @@ protected:
       if (goal_handle->is_canceling()) {
         RCLCPP_INFO(node_->get_logger(), "Canceling %s", primitive_name_.c_str());
         goal_handle->canceled(result);
+
+		// Stop the robot
+        geometry_msgs::msg::Twist cmd_vel;
+        cmd_vel.linear.x = 0.0;
+        cmd_vel.linear.y = 0.0;
+        cmd_vel.angular.z = 0.0;
+        robot_->sendVelocity(cmd_vel);
         return;
       }
 

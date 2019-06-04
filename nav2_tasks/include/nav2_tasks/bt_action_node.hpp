@@ -197,6 +197,7 @@ protected:
   // a result from the server
   std::chrono::milliseconds node_loop_timeout_;
 
+  // A mutex to allow only one spin_until_future_complete at a time
   std::mutex spin_mutex_;
 };
 

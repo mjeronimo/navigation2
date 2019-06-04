@@ -72,7 +72,6 @@ public:
     rclcpp::spin_some(node_);
     if (!robot_->getCurrentPose(current_pose)) {
       RCLCPP_DEBUG(node_->get_logger(), "Current robot pose is not available.");
-      RCLCPP_INFO(node_->get_logger(), "Current robot pose is not available.");
       return false;
     }
 
@@ -83,14 +82,6 @@ public:
       current_pose->pose.covariance[cov_a_] < rot_tol_)
     {
       RCLCPP_INFO(node_->get_logger(), "Robot is localized");
-#if 1
-	printf("covariance[cov_x]: %lf\n", current_pose->pose.covariance[cov_x_]);
-	printf("covariance[cov_y]: %lf\n", current_pose->pose.covariance[cov_y_]);
-	printf("covariance[cov_a]: %lf\n", current_pose->pose.covariance[cov_a_]);
-	printf("x_tol: %lf\n", x_tol_);
-	printf("y_tol: %lf\n", y_tol_);
-	printf("rot_tol: %lf\n", rot_tol_);
-#endif
       return true;
     }
 

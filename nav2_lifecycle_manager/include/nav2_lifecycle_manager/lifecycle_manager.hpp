@@ -64,7 +64,7 @@ protected:
   nav2_tasks::BtStatus loadAndExecute(const std::string & parameter_name);
 
   // The Behavior Tree to be used for the various lifecycle manager operations
-  nav2_tasks::BehaviorTreeEngine bt_;
+  //nav2_tasks::BehaviorTreeEngine bt_;
 
   // The blackboard that will be provided to the BTs
   BT::Blackboard::Ptr blackboard_;
