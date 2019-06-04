@@ -33,6 +33,7 @@
 #include "nav2_tasks/rate_controller_node.hpp"
 #include "nav2_tasks/spin_action.hpp"
 #include "nav2_util/lifecycle_service_client.hpp"
+#include "nav2_util/node_utils.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 using namespace std::chrono_literals;
@@ -43,8 +44,8 @@ namespace nav2_tasks
 
 BehaviorTreeEngine::BehaviorTreeEngine()
 {
-// TODO: unique node name
-  service_client_node_ = std::make_shared<rclcpp::Node>("behavior_tree_engine");
+  // A node to be used for service calls
+  service_client_node_ = nav2_util::generate_internal_node("behavior_tree_engine");
 
   // Register our custom action nodes so that they can be included in XML description
   factory_.registerNodeType<nav2_tasks::ComputePathToPoseAction>("ComputePathToPose");
@@ -56,8 +57,6 @@ BehaviorTreeEngine::BehaviorTreeEngine()
   factory_.registerNodeType<nav2_tasks::IsStuckCondition>("IsStuck");
   factory_.registerNodeType<nav2_tasks::GoalReachedCondition>("GoalReached");
   factory_.registerNodeType<nav2_tasks::InitialPoseReceivedCondition>("InitialPoseReceived");
-
-  // Register our simple condition nodes
   factory_.registerNodeType<nav2_tasks::IsLocalizedCondition>("IsLocalized");
 
   // Register our custom decorator nodes
@@ -75,28 +74,29 @@ BehaviorTreeEngine::BehaviorTreeEngine()
   const BT::NodeParameters bringup_node_params {{"node_name", "unknown"}};
   registerSimpleActionWithParameters("BringUpNode",
     std::bind(&BehaviorTreeEngine::bringUpNode, this, std::placeholders::_1),
-	  bringup_node_params);
+    bringup_node_params);
 
   const BT::NodeParameters shutdown_node_params {{"node_name", "unknown"}};
   registerSimpleActionWithParameters("ShutDownNode",
     std::bind(&BehaviorTreeEngine::shutDownNode, this, std::placeholders::_1),
-	  shutdown_node_params);
+    shutdown_node_params);
 
   const BT::NodeParameters pause_node_params {{"node_name", "unknown"}};
   registerSimpleActionWithParameters("PauseNode",
     std::bind(&BehaviorTreeEngine::pauseNode, this, std::placeholders::_1),
-	  pause_node_params);
+    pause_node_params);
 
   const BT::NodeParameters message_params {{"msg", "unknown"}};
   registerSimpleActionWithParameters("Message",
     std::bind(&BehaviorTreeEngine::message, this, std::placeholders::_1),
-	  message_params);
+    message_params);
 
   const BT::NodeParameters set_condition_params {{"key", "unknown"}, {"value", "unknown"}};
   registerSimpleActionWithParameters("SetCondition",
     std::bind(&BehaviorTreeEngine::setCondition, this, std::placeholders::_1),
-	  set_condition_params);
+    set_condition_params);
 
+  // A service client used in one of the simple action nodes
   global_localization_client_ =
     std::make_unique<nav2_util::GlobalLocalizationServiceClient>("bt_navigator");
 }
@@ -139,7 +139,7 @@ BehaviorTreeEngine::run(
   rclcpp::WallRate loopRate(loopTimeout);
   BT::NodeStatus result = BT::NodeStatus::RUNNING;
 
-  // Loop until something happens with ROS or the node completes w/ success or failure
+  // Loop until something happens with ROS or the node completes
   while (rclcpp::ok() && result == BT::NodeStatus::RUNNING) {
     result = tree->root_node->executeTick();
 
@@ -190,14 +190,17 @@ BehaviorTreeEngine::clearEntirelyCostmapServiceRequest(
 }
 
 void
-BehaviorTreeEngine::registerSimpleActionWithParameters(const std::string& ID,
-  const BT::SimpleActionNode::TickFunctor& tick_functor, const BT::NodeParameters & params)
+BehaviorTreeEngine::registerSimpleActionWithParameters(
+  const std::string & ID,
+  const BT::SimpleActionNode::TickFunctor & tick_functor,
+  const BT::NodeParameters & params)
 {
-  BT::NodeBuilder builder = [tick_functor, ID](const std::string& name, const BT::NodeParameters& params) {
-    return std::unique_ptr<BT::TreeNode>(new BT::SimpleActionNode(name, tick_functor, params));
-  };
+  BT::NodeBuilder builder =
+    [tick_functor, ID](const std::string & name, const BT::NodeParameters & params) {
+      return std::unique_ptr<BT::TreeNode>(new BT::SimpleActionNode(name, tick_functor, params));
+    };
 
-  BT::TreeNodeManifest manifest = { BT::NodeType::ACTION, ID, params };
+  BT::TreeNodeManifest manifest = {BT::NodeType::ACTION, ID, params};
   factory_.registerBuilder(manifest, builder);
 }
 
@@ -210,12 +213,14 @@ BehaviorTreeEngine::bringUpNode(BT::TreeNode & tree_node)
   nav2_util::LifecycleServiceClient lifecycle_client(node_name, service_client_node_);
 
   if (!lifecycle_client.change_state(Transition::TRANSITION_CONFIGURE)) {
-    RCLCPP_ERROR(service_client_node_->get_logger(), "Failed to configure node: %s", node_name.c_str());
+    RCLCPP_ERROR(service_client_node_->get_logger(), "Failed to configure node: %s",
+      node_name.c_str());
     return BT::NodeStatus::FAILURE;
   }
 
   if (!lifecycle_client.change_state(Transition::TRANSITION_ACTIVATE)) {
-    RCLCPP_ERROR(service_client_node_->get_logger(), "Failed to activate node: %s", node_name.c_str());
+    RCLCPP_ERROR(service_client_node_->get_logger(), "Failed to activate node: %s",
+      node_name.c_str());
     return BT::NodeStatus::FAILURE;
   }
 
@@ -231,17 +236,20 @@ BehaviorTreeEngine::shutDownNode(BT::TreeNode & tree_node)
   nav2_util::LifecycleServiceClient lifecycle_client(node_name, service_client_node_);
 
   if (!lifecycle_client.change_state(Transition::TRANSITION_DEACTIVATE)) {
-    RCLCPP_ERROR(service_client_node_->get_logger(), "Failed to deactivate node: %s", node_name.c_str());
+    RCLCPP_ERROR(service_client_node_->get_logger(), "Failed to deactivate node: %s",
+      node_name.c_str());
     return BT::NodeStatus::FAILURE;
   }
 
   if (!lifecycle_client.change_state(Transition::TRANSITION_CLEANUP)) {
-    RCLCPP_ERROR(service_client_node_->get_logger(), "Failed to cleanup node: %s", node_name.c_str());
+    RCLCPP_ERROR(service_client_node_->get_logger(), "Failed to cleanup node: %s",
+      node_name.c_str());
     return BT::NodeStatus::FAILURE;
   }
 
   if (!lifecycle_client.change_state(Transition::TRANSITION_UNCONFIGURED_SHUTDOWN)) {
-    RCLCPP_ERROR(service_client_node_->get_logger(), "Failed to shutdown node: %s", node_name.c_str());
+    RCLCPP_ERROR(service_client_node_->get_logger(), "Failed to shutdown node: %s",
+      node_name.c_str());
     return BT::NodeStatus::FAILURE;
   }
 
@@ -257,12 +265,14 @@ BehaviorTreeEngine::pauseNode(BT::TreeNode & tree_node)
   nav2_util::LifecycleServiceClient lifecycle_client(node_name, service_client_node_);
 
   if (!lifecycle_client.change_state(Transition::TRANSITION_DEACTIVATE)) {
-    RCLCPP_ERROR(service_client_node_->get_logger(), "Failed to deactivate node: %s", node_name.c_str());
+    RCLCPP_ERROR(service_client_node_->get_logger(), "Failed to deactivate node: %s",
+      node_name.c_str());
     return BT::NodeStatus::FAILURE;
   }
 
   if (!lifecycle_client.change_state(Transition::TRANSITION_CLEANUP)) {
-    RCLCPP_ERROR(service_client_node_->get_logger(), "Failed to cleanup node: %s", node_name.c_str());
+    RCLCPP_ERROR(service_client_node_->get_logger(), "Failed to cleanup node: %s",
+      node_name.c_str());
     return BT::NodeStatus::FAILURE;
   }
 
@@ -278,7 +288,8 @@ BehaviorTreeEngine::message(BT::TreeNode & tree_node)
   std::string msg;
   tree_node.getParam<std::string>("msg", msg);
 
-  RCLCPP_INFO(service_client_node_->get_logger(), ANSI_COLOR_BLUE "\33[1m%s\33[0m" ANSI_COLOR_RESET, msg.c_str());
+  RCLCPP_INFO(service_client_node_->get_logger(),
+    ANSI_COLOR_BLUE "\33[1m%s\33[0m" ANSI_COLOR_RESET, msg.c_str());
 
   return BT::NodeStatus::SUCCESS;
 }
@@ -292,7 +303,7 @@ BehaviorTreeEngine::setCondition(BT::TreeNode & tree_node)
   std::string value;
   tree_node.getParam<std::string>("value", value);
 
-  tree_node.blackboard()->template set<bool>(key, (value == "true")? true : false);
+  tree_node.blackboard()->template set<bool>(key, (value == "true") ? true : false);  // NOLINT
 
   return BT::NodeStatus::SUCCESS;
 }

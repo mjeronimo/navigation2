@@ -35,9 +35,10 @@ LifecycleManager::LifecycleManager()
   // the 'startup' service
   declare_parameter("autostart", rclcpp::ParameterValue(false));
 
-  // Each of the lifecycle manager's services has a corresponiding BT XML file, specified by a parameter
+  // Each of the lifecycle manager's services has a corresponding BT XML file
   declare_parameter("bt_xml_filename.startup", rclcpp::ParameterValue(std::string("startup.xml")));
-  declare_parameter("bt_xml_filename.shutdown", rclcpp::ParameterValue(std::string("shutdown.xml")));
+  declare_parameter("bt_xml_filename.shutdown",
+    rclcpp::ParameterValue(std::string("shutdown.xml")));
   declare_parameter("bt_xml_filename.pause", rclcpp::ParameterValue(std::string("pause.xml")));
   declare_parameter("bt_xml_filename.resume", rclcpp::ParameterValue(std::string("resume.xml")));
 
@@ -82,8 +83,7 @@ LifecycleManager::startupCallback(
   const std::shared_ptr<std_srvs::srv::Empty::Request>/*request*/,
   std::shared_ptr<std_srvs::srv::Empty::Response>/*response*/)
 {
-  switch (loadAndExecute("bt_xml_filename.startup"))
-  {
+  switch (loadAndExecute("bt_xml_filename.startup")) {
     case nav2_tasks::BtStatus::SUCCEEDED:
       RCLCPP_INFO(get_logger(), "Startup succeeded!");
       return;
@@ -104,8 +104,7 @@ LifecycleManager::shutdownCallback(
   const std::shared_ptr<std_srvs::srv::Empty::Request>/*request*/,
   std::shared_ptr<std_srvs::srv::Empty::Response>/*response*/)
 {
-  switch (loadAndExecute("bt_xml_filename.shutdown"))
-  {
+  switch (loadAndExecute("bt_xml_filename.shutdown")) {
     case nav2_tasks::BtStatus::SUCCEEDED:
       return;
 
@@ -125,8 +124,7 @@ LifecycleManager::pauseCallback(
   const std::shared_ptr<std_srvs::srv::Empty::Request>/*request*/,
   std::shared_ptr<std_srvs::srv::Empty::Response>/*response*/)
 {
-  switch (loadAndExecute("bt_xml_filename.pause"))
-  {
+  switch (loadAndExecute("bt_xml_filename.pause")) {
     case nav2_tasks::BtStatus::SUCCEEDED:
       return;
 
@@ -146,8 +144,7 @@ LifecycleManager::resumeCallback(
   const std::shared_ptr<std_srvs::srv::Empty::Request>/*request*/,
   std::shared_ptr<std_srvs::srv::Empty::Response>/*response*/)
 {
-  switch (loadAndExecute("bt_xml_filename.resume"))
-  {
+  switch (loadAndExecute("bt_xml_filename.resume")) {
     case nav2_tasks::BtStatus::SUCCEEDED:
       return;
 

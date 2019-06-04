@@ -15,7 +15,8 @@
 #ifndef NAV2_LIFECYCLE_MANAGER__LIFECYCLE_MANAGER_HPP_
 #define NAV2_LIFECYCLE_MANAGER__LIFECYCLE_MANAGER_HPP_
 
-//#include <memory>
+#include <memory>
+#include <string>
 
 #include "nav2_tasks/behavior_tree_engine.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -64,7 +65,7 @@ protected:
   nav2_tasks::BtStatus loadAndExecute(const std::string & parameter_name);
 
   // The Behavior Tree to be used for the various lifecycle manager operations
-  //nav2_tasks::BehaviorTreeEngine bt_;
+  // nav2_tasks::BehaviorTreeEngine bt_;
 
   // The blackboard that will be provided to the BTs
   BT::Blackboard::Ptr blackboard_;

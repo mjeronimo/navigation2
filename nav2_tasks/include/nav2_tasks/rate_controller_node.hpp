@@ -32,12 +32,14 @@ public:
     double hz = 1.0;
     getParam<double>("hz", hz);
     period_ = 1.0 / hz;
+
+    getParam<bool>("skip_first", skip_first_);
   }
 
   // Any BT node that accepts parameters must provide a requiredNodeParameters method
   static const BT::NodeParameters & requiredNodeParameters()
   {
-    static BT::NodeParameters params = {{"hz", "10"}};
+    static BT::NodeParameters params = {{"hz", "10"}, {"skip_first", "false"}};
     return params;
   }
 
@@ -46,9 +48,9 @@ private:
 
   std::chrono::time_point<std::chrono::high_resolution_clock> start_;
   double period_;
+  bool skip_first_{false};
+  bool first_time{false};
 };
-
-//static bool first_time{false};
 
 inline BT::NodeStatus RateController::tick()
 {
@@ -56,7 +58,7 @@ inline BT::NodeStatus RateController::tick()
     // Reset the starting point since we're starting a new iteration of
     // the rate controller (moving from IDLE to RUNNING)
     start_ = std::chrono::high_resolution_clock::now();
-    //first_time = true;
+    first_time = true;
   }
 
   setStatus(BT::NodeStatus::RUNNING);
@@ -70,8 +72,8 @@ inline BT::NodeStatus RateController::tick()
   auto seconds = std::chrono::duration_cast<float_seconds>(elapsed);
 
   // If we've exceed the specified period, execute the child node
-  if (/*first_time || */seconds.count() >= period_) {
-    //first_time = false;
+  if ((first_time && !skip_first_) || seconds.count() >= period_) {
+    first_time = false;
     const BT::NodeStatus child_state = child_node_->executeTick();
 
     switch (child_state) {

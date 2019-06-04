@@ -29,20 +29,20 @@ class InitialPoseReceivedCondition : public BT::ConditionNode
 {
 public:
   explicit InitialPoseReceivedCondition(const std::string & condition_name)
-  : BT::ConditionNode(condition_name)
+  : BT::ConditionNode(condition_name), initial_pose_checker_("initialpose")
   {
-    initial_pose_checker_ = std::make_unique<nav2_util::MessageChecker<geometry_msgs::msg::PoseWithCovarianceStamped>>("initialpose");
   }
 
   InitialPoseReceivedCondition() = delete;
 
   BT::NodeStatus tick() override
   {
-    return initial_pose_checker_->messageReceived()? BT::NodeStatus::SUCCESS : BT::NodeStatus::FAILURE;
+    return initial_pose_checker_.messageReceived() ?
+           BT::NodeStatus::SUCCESS : BT::NodeStatus::FAILURE;
   }
 
 protected:
-  std::unique_ptr<nav2_util::MessageChecker<geometry_msgs::msg::PoseWithCovarianceStamped>> initial_pose_checker_;
+  nav2_util::MessageChecker<geometry_msgs::msg::PoseWithCovarianceStamped> initial_pose_checker_;
 };
 
 }  // namespace nav2_tasks

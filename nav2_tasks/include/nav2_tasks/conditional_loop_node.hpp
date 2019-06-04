@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef NAV2_TASKS__CONDITIONAL_LOOP_HPP_
-#define NAV2_TASKS__CONDITIONAL_LOOP_HPP_
+#ifndef NAV2_TASKS__CONDITIONAL_LOOP_NODE_HPP_
+#define NAV2_TASKS__CONDITIONAL_LOOP_NODE_HPP_
 
 #include <string>
 
@@ -31,9 +31,9 @@ public:
     getParam<std::string>("key", key_);
 
     // Convert the XML string param to a boolean
-	std::string temp_value;
+    std::string temp_value;
     getParam<std::string>("value", temp_value);
-	target_value_ = (temp_value == "true");
+    target_value_ = (temp_value == "true");
   }
 
   // Any BT node that accepts parameters must provide a requiredNodeParameters method
@@ -59,9 +59,9 @@ inline BT::NodeStatus ConditionalLoop::tick()
   bool current_value = false;
   blackboard()->get<bool>(key_, current_value);
 
-  return (current_value == target_value_)? BT::NodeStatus::SUCCESS : BT::NodeStatus::RUNNING;
+  return (current_value == target_value_) ? BT::NodeStatus::SUCCESS : BT::NodeStatus::RUNNING;
 }
 
 }  // namespace nav2_tasks
 
-#endif  // NAV2_TASKS__CONDITIONAL_LOOP_HPP_
+#endif  // NAV2_TASKS__CONDITIONAL_LOOP_NODE_HPP_

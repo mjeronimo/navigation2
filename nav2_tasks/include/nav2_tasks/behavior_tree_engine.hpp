@@ -38,12 +38,12 @@ public:
   BtStatus run(
     BT::Blackboard::Ptr & blackboard,
     const std::string & behavior_tree_xml,
-    std::function<bool()> cancelRequested = []() -> bool {return false; },
+    std::function<bool()> cancelRequested = []() -> bool {return false;},
     std::chrono::milliseconds loopTimeout = std::chrono::milliseconds(10));
 
   BtStatus run(
     std::unique_ptr<BT::Tree> & tree,
-    std::function<bool()> cancelRequested = []() -> bool {return false; },
+    std::function<bool()> cancelRequested = []() -> bool {return false;},
     std::chrono::milliseconds loopTimeout = std::chrono::milliseconds(10));
 
   BT::Tree buildTreeFromText(std::string & xml_string, BT::Blackboard::Ptr blackboard);
@@ -80,8 +80,9 @@ protected:
   BT::NodeStatus message(BT::TreeNode & tree_node);
   BT::NodeStatus setCondition(BT::TreeNode & tree_node);
 
-  void registerSimpleActionWithParameters(const std::string& ID,
-    const BT::SimpleActionNode::TickFunctor& tick_functor, const BT:: NodeParameters & params);
+  void registerSimpleActionWithParameters(
+    const std::string & ID,
+    const BT::SimpleActionNode::TickFunctor & tick_functor, const BT::NodeParameters & params);
 
   // Service clients
   std::unique_ptr<nav2_util::GlobalLocalizationServiceClient> global_localization_client_;
