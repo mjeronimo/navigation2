@@ -54,13 +54,11 @@ BehaviorTreeEngine::BehaviorTreeEngine()
 
   // Register our custom condition nodes
   factory_.registerNodeType<nav2_tasks::IsStuckCondition>("IsStuck");
-  factory_.registerNodeType<nav2_tasks::IsLocalizedCondition>("IsLocalized");
   factory_.registerNodeType<nav2_tasks::GoalReachedCondition>("GoalReached");
   factory_.registerNodeType<nav2_tasks::InitialPoseReceivedCondition>("InitialPoseReceived");
 
   // Register our simple condition nodes
-  factory_.registerSimpleCondition("initialPoseReceived",
-    std::bind(&BehaviorTreeEngine::initialPoseReceived, this, std::placeholders::_1));
+  factory_.registerNodeType<nav2_tasks::IsLocalizedCondition>("IsLocalized");
 
   // Register our custom decorator nodes
   factory_.registerNodeType<nav2_tasks::RateController>("RateController");
@@ -171,13 +169,6 @@ BehaviorTreeEngine::globalLocalizationServiceRequest()
 
   auto succeeded = global_localization_client_->invoke(request, response);
   return succeeded ? BT::NodeStatus::SUCCESS : BT::NodeStatus::FAILURE;
-}
-
-BT::NodeStatus
-BehaviorTreeEngine::initialPoseReceived(BT::TreeNode & tree_node)
-{
-  auto initPoseReceived = tree_node.blackboard()->template get<bool>("initial_pose_received");
-  return initPoseReceived ? BT::NodeStatus::SUCCESS : BT::NodeStatus::FAILURE;
 }
 
 BT::NodeStatus
@@ -301,7 +292,7 @@ BehaviorTreeEngine::setCondition(BT::TreeNode & tree_node)
   std::string value;
   tree_node.getParam<std::string>("value", value);
 
-  tree_node.blackboard()->template set<bool>(key, value=="true"? true : false);
+  tree_node.blackboard()->template set<bool>(key, (value == "true")? true : false);
 
   return BT::NodeStatus::SUCCESS;
 }

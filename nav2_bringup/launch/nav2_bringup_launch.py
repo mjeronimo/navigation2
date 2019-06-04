@@ -119,6 +119,14 @@ def generate_launch_description():
             ['__params:=', params_file]],
         cwd=[launch_dir], output='screen')
 
+    start_motion_primitives_cmd = launch.actions.ExecuteProcess(
+        cmd=[
+            os.path.join(
+                get_package_prefix('nav2_motion_primitives'),
+                'lib/nav2_motion_primitives/motion_primitives_node'),
+            ['__params:=', params_file]],
+        cwd=[launch_dir], output='screen')
+
     start_world_model_cmd = launch.actions.ExecuteProcess(
         cmd=[
             os.path.join(
@@ -183,6 +191,7 @@ def generate_launch_description():
     ld.add_action(start_lifecycle_manager_cmd)
     ld.add_action(start_map_server_cmd)
     ld.add_action(start_localizer_cmd)
+    ld.add_action(start_motion_primitives_cmd)
     ld.add_action(start_world_model_cmd)
     ld.add_action(start_dwb_cmd)
     ld.add_action(start_planner_cmd)

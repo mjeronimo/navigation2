@@ -146,7 +146,7 @@ map_server:
 lifecycle_manager:
   ros__parameters:
     use_sim_time: True
-    bt_xml_filename.startup: "/home/mjeronimo/src/navigation2/nav2_lifecycle_manager/behavior_trees/startup_w_manual_localization.xml" 
+    bt_xml_filename.startup: "/home/mjeronimo/src/navigation2/nav2_lifecycle_manager/behavior_trees/startup_w_auto_localization.xml" 
     bt_xml_filename.shutdown: "/home/mjeronimo/src/navigation2/nav2_lifecycle_manager/behavior_trees/shutdown.xml"
     bt_xml_filename.pause: "/home/mjeronimo/src/navigation2/nav2_lifecycle_manager/behavior_trees/pause.xml"
     bt_xml_filename.resume: "/home/mjeronimo/src/navigation2/nav2_lifecycle_manager/behavior_trees/resume.xml"

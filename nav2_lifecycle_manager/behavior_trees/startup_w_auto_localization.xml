@@ -1,27 +1,32 @@
 <root main_tree_to_execute="MainTree">
   <BehaviorTree ID="MainTree">
-    <SequenceStar name="StartupWithManualLocalization">
+    <SequenceStar name="StartupWithAutoLocalization">
       <Message msg="Starting the system bringup..."/>
       <SequenceStar name="Localization">
         <Message msg="Configuring and activating map_server"/>
         <BringUpNode node_name="map_server"/>
         <Message msg="Configuring and activating amcl"/>
         <BringUpNode node_name="amcl"/>
-        <Timeout msec="10000">
-          <ConditionalLoop key="initial_pose_received" value="true">
+        <Message msg="Starting auto localization"/>
+        <SequenceStar>
+          <globalLocalizationServiceRequest/>
+          <ConditionalLoop key="is_localized" value="true">
             <Fallback>
               <Sequence>
-                <InitialPoseReceived/>
-                <SetCondition key="initial_pose_received" value="true"/>
+                <IsLocalized/>
+                <SetCondition key="is_localized" value="true"/>
               </Sequence>
-              <RateController hz="1.0" skip_first="true">
-                <Message msg="Waiting for initial pose..."/>
-              </RateController>
+              <SequenceStar>
+                <Spin/>
+                <BackUp/>
+                <Spin/>
+              </SequenceStar>
             </Fallback>
           </ConditionalLoop>
-        </Timeout>
+        </SequenceStar>
       </SequenceStar>
-      <SequenceStar name="BringUpRemainingNodes">
+      <Message msg="Bring up remaining nodes"/>
+      <SequenceStar name="RemainingNodes">
         <Message msg="Configuring and activating world_model"/>
         <BringUpNode node_name="world_model"/>
         <Message msg="Configuring and activating dwb_controller"/>

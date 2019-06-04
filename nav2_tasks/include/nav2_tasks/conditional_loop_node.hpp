@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Intel Corporation
+// Copyright (c) 2019 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,54 +28,44 @@ public:
   ConditionalLoop(const std::string & name, const BT::NodeParameters & params)
   : BT::DecoratorNode(name, params)
   {
-    std::string target_value = "unknown";
-    getParam<std::string>("target_value", target_value);
+    getParam<std::string>("key", key_);
+
+    // Convert the XML string param to a boolean
+	std::string temp_value;
+    getParam<std::string>("value", temp_value);
+	target_value_ = (temp_value == "true");
   }
 
   // Any BT node that accepts parameters must provide a requiredNodeParameters method
   static const BT::NodeParameters & requiredNodeParameters()
   {
-    static BT::NodeParameters params = {{"target_value", "unknown"}};
+    static BT::NodeParameters params = {{"key", "unknown"}, {"value", "unknown"}};
     return params;
   }
 
 private:
   BT::NodeStatus tick() override;
+
+  std::string key_;
+  bool target_value_;
 };
 
 inline BT::NodeStatus ConditionalLoop::tick()
 {
   setStatus(BT::NodeStatus::RUNNING);
+  child_node_->executeTick();
 
-  /*const BT::NodeStatus child_state =*/ child_node_->executeTick();
+  // We're waiting for the value on the blackboard to match the target
+  bool current_value = false;
+  blackboard()->get<bool>(key_, current_value);
 
-  bool initial_pose_received = false;
-  blackboard()->get<bool>("initial_pose_received", initial_pose_received);
-
-  if (initial_pose_received) {
-    printf("ConditionalLoop: initial_pose_received: %d\n", (int) initial_pose_received);
-    return BT::NodeStatus::SUCCESS;
+  if (current_value == target_value_) {
+     printf("!!!!!!!!!!!!!key: %s\n", key_.c_str());
+     printf("!!!!!!!!!!!!!target_value: %d\n", (int) current_value);
+     printf("!!!!!!!!!!!!!current_value: %d\n", (int) target_value_);
   }
 
-#if 0
-  switch (child_state) {
-    case BT::NodeStatus::RUNNING:
-      return BT::NodeStatus::RUNNING;
-
-    case BT::NodeStatus::SUCCESS:
-      child_node_->setStatus(BT::NodeStatus::IDLE);
-      return BT::NodeStatus::SUCCESS;
-
-    case BT::NodeStatus::FAILURE:
-    default:
-      child_node_->setStatus(BT::NodeStatus::IDLE);
-      return BT::NodeStatus::FAILURE;
-  }
-
-  return status();
-#else
-  return BT::NodeStatus::RUNNING;
-#endif
+  return (current_value == target_value_)? BT::NodeStatus::SUCCESS : BT::NodeStatus::RUNNING;
 }
 
 }  // namespace nav2_tasks

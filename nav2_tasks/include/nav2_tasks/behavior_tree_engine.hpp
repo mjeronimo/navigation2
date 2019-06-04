@@ -73,7 +73,6 @@ protected:
 
   // Methods used to register as (simple action) BT nodes
   BT::NodeStatus globalLocalizationServiceRequest();
-  BT::NodeStatus initialPoseReceived(BT::TreeNode & tree_node);
   BT::NodeStatus clearEntirelyCostmapServiceRequest(BT::TreeNode & tree_node);
   BT::NodeStatus bringUpNode(BT::TreeNode & tree_node);
   BT::NodeStatus shutDownNode(BT::TreeNode & tree_node);
