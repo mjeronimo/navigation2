@@ -7,19 +7,26 @@
         <StartNode node_name="map_server"/>
         <Message msg="Configuring and activating amcl"/>
         <StartNode node_name="amcl"/>
-        <Timeout msec="10000">
-          <ConditionalLoop key="is_localized" value="true">
-            <Fallback>
-              <Sequence>
-                <IsLocalized/>
-                <SetCondition key="is_localized" value="true"/>
-              </Sequence>
-              <RateController hz="1.0" skip_first="true">
-                <Message msg="Waiting for initial pose..."/>
-              </RateController>
-            </Fallback>
-          </ConditionalLoop>
-        </Timeout>
+        <Fallback>
+          <Timeout msec="10000">
+            <ConditionalLoop key="is_localized" value="true">
+              <Fallback>
+                <Sequence>
+                  <IsLocalized/>
+                  <SetCondition key="is_localized" value="true"/>
+                </Sequence>
+                <RateController hz="1.0" skip_first="true">
+                  <Message msg="Waiting for initial pose..."/>
+                </RateController>
+              </Fallback>
+            </ConditionalLoop>
+          </Timeout>
+          <SequenceStar>
+            <StopNode node_name="amcl"/>
+            <StopNode node_name="map_server"/>
+            <AlwaysFailure/>
+          </SequenceStar>
+        </Fallback>
       </SequenceStar>
       <SequenceStar name="BringUpRemainingNodes">
         <Message msg="Configuring and activating world_model"/>
