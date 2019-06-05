@@ -72,13 +72,13 @@ BehaviorTreeEngine::BehaviorTreeEngine()
     std::placeholders::_1));
 
   const BT::NodeParameters bringup_node_params {{"node_name", "unknown"}};
-  registerSimpleActionWithParameters("BringUpNode",
-    std::bind(&BehaviorTreeEngine::bringUpNode, this, std::placeholders::_1),
+  registerSimpleActionWithParameters("StartNode",
+    std::bind(&BehaviorTreeEngine::startNode, this, std::placeholders::_1),
     bringup_node_params);
 
   const BT::NodeParameters shutdown_node_params {{"node_name", "unknown"}};
-  registerSimpleActionWithParameters("ShutDownNode",
-    std::bind(&BehaviorTreeEngine::shutDownNode, this, std::placeholders::_1),
+  registerSimpleActionWithParameters("StopNode",
+    std::bind(&BehaviorTreeEngine::stopNode, this, std::placeholders::_1),
     shutdown_node_params);
 
   const BT::NodeParameters pause_node_params {{"node_name", "unknown"}};
@@ -205,7 +205,7 @@ BehaviorTreeEngine::registerSimpleActionWithParameters(
 }
 
 BT::NodeStatus
-BehaviorTreeEngine::bringUpNode(BT::TreeNode & tree_node)
+BehaviorTreeEngine::startNode(BT::TreeNode & tree_node)
 {
   std::string node_name;
   tree_node.getParam<std::string>("node_name", node_name);
@@ -228,7 +228,7 @@ BehaviorTreeEngine::bringUpNode(BT::TreeNode & tree_node)
 }
 
 BT::NodeStatus
-BehaviorTreeEngine::shutDownNode(BT::TreeNode & tree_node)
+BehaviorTreeEngine::stopNode(BT::TreeNode & tree_node)
 {
   std::string node_name;
   tree_node.getParam<std::string>("node_name", node_name);

@@ -3,17 +3,17 @@
     <SequenceStar name="root_sequence">
       <Message msg="Starting the system bringup..."/>
       <Message msg="Configuring and activating map_server"/>
-      <BringUpNode node_name="map_server"/>
+      <StartNode node_name="map_server"/>
       <Message msg="Configuring and activating amcl"/>
-      <BringUpNode node_name="amcl"/>
+      <StartNode node_name="amcl"/>
       <Message msg="Configuring and activating world_model"/>
-      <BringUpNode node_name="world_model"/>
+      <StartNode node_name="world_model"/>
       <Message msg="Configuring and activating dwb_controller"/>
-      <BringUpNode node_name="dwb_controller"/>
+      <StartNode node_name="dwb_controller"/>
       <Message msg="Configuring and activating navfn_planner"/>
-      <BringUpNode node_name="navfn_planner"/>
+      <StartNode node_name="navfn_planner"/>
       <Message msg="Configuring and activating bt_navigator"/>
-      <BringUpNode node_name="bt_navigator"/>
+      <StartNode node_name="bt_navigator"/>
       <Message msg="The system is active"/>
     </SequenceStar>
   </BehaviorTree> 

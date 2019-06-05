@@ -3,17 +3,17 @@
     <SequenceStar name="root_sequence">
       <Message msg="Shutting down the system..."/>
       <Message msg="Deactivating, cleaning up, and shutting down bt_navigator"/>
-      <ShutDownNode node_name="bt_navigator"/>
+      <StopNode node_name="bt_navigator"/>
       <Message msg="Deactivating, cleaning up, and shutting down navfn_planner"/>
-      <ShutDownNode node_name="navfn_planner"/>
+      <StopNode node_name="navfn_planner"/>
       <Message msg="Deactivating, cleaning up, and shutting down dwb_controller"/>
-      <ShutDownNode node_name="dwb_controller"/>
+      <StopNode node_name="dwb_controller"/>
       <Message msg="Deactivating, cleaning up, and shutting down world_model"/>
-      <ShutDownNode node_name="world_model"/>
+      <StopNode node_name="world_model"/>
       <Message msg="Deactivating, cleaning up, and shutting down amcl"/>
-      <ShutDownNode node_name="amcl"/>
+      <StopNode node_name="amcl"/>
       <Message msg="Deactivating, cleaning up, and shutting down map_server"/>
-      <ShutDownNode node_name="map_server"/>
+      <StopNode node_name="map_server"/>
       <Message msg="The system has been successfully shut down"/>
   </SequenceStar>
   </BehaviorTree> 
