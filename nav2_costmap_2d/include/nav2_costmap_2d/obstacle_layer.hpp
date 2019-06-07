@@ -179,6 +179,8 @@ protected:
 
   bool rolling_window_;
   int combination_method_;
+
+  message_filters::Connection connection_;
 };
 
 }  // namespace nav2_costmap_2d
